@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestion des Congés — AUGON</title>
+<style>
+:root{
+  --bg:#f4f5f3; --panel:#ffffff; --ink:#182521; --sub:#5b6b66; --line:#dde2df;
+  --accent:#0f5c4d; --accent-ink:#ffffff; --gold:#b5893a; --danger:#a4392f; --danger-bg:#fbeceb;
+  --ok-bg:#e8f3ee; --pending-bg:#fbf3e3;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --bg:#12181a; --panel:#1a2224; --ink:#e9efec; --sub:#9aa8a3; --line:#2b3538; --accent:#3ba98a; --accent-ink:#0b1210; --gold:#d1a75a; --danger:#e57a70; --danger-bg:#3a2320; --ok-bg:#173226; --pending-bg:#332a17; }
+}
+:root[data-theme="dark"]{ --bg:#12181a; --panel:#1a2224; --ink:#e9efec; --sub:#9aa8a3; --line:#2b3538; --accent:#3ba98a; --accent-ink:#0b1210; --gold:#d1a75a; --danger:#e57a70; --danger-bg:#3a2320; --ok-bg:#173226; --pending-bg:#332a17; }
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+header{background:var(--accent);color:var(--accent-ink);padding:calc(env(safe-area-inset-top,0px) + 18px) 20px 16px;}
+header h1{margin:0;font-size:1.18rem;font-weight:700;}
+header p{margin:4px 0 0;font-size:.8rem;opacity:.85;}
+nav{display:flex;gap:6px;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--line);padding:8px 12px;position:sticky;top:0;z-index:5;-webkit-overflow-scrolling:touch;}
+nav button{flex:0 0 auto;border:none;background:transparent;color:var(--sub);padding:8px 12px;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;}
+nav button.active{background:var(--accent);color:var(--accent-ink);}
+main{max-width:1000px;margin:0 auto;padding:18px 16px 60px;}
+.view{display:none;} .view.active{display:block;}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+.card h2{margin:0 0 4px;font-size:1rem;}
+.card .hint{color:var(--sub);font-size:.8rem;margin:0 0 14px;}
+label{display:block;font-size:.76rem;color:var(--sub);font-weight:600;margin:10px 0 4px;}
+select,input[type=date],input[type=text],input[type=number],textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-size:.9rem;font-family:inherit;}
+select[multiple]{height:120px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 12px;}
+@media(max-width:560px){.grid2,.grid3{grid-template-columns:1fr;}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.chip{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:.8rem;cursor:pointer;background:var(--bg);}
+.chip.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+.solde-box{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+.solde-box div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.76rem;color:var(--sub);}
+.solde-box div.on{border-color:var(--accent);}
+.solde-box b{display:block;font-size:1.05rem;color:var(--ink);}
+.btn{background:var(--accent);color:var(--accent-ink);border:none;padding:10px 18px;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);}
+.btn.small{padding:6px 12px;font-size:.78rem;}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);gap:10px;flex-wrap:wrap;}
+.row:last-child{border-bottom:none;}
+.badge{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:12px;}
+.badge.attente{background:var(--pending-bg);color:var(--gold);}
+.badge.validee{background:var(--ok-bg);color:var(--accent);}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line);}
+th{color:var(--sub);font-weight:600;font-size:.7rem;text-transform:uppercase;}
+input.inline{border:none;background:transparent;padding:4px;width:56px;text-align:center;border-bottom:1px dashed var(--line);}
+select.inline{border:none;background:transparent;padding:4px;border-bottom:1px dashed var(--line);font-size:.8rem;}
+.tablewrap{overflow-x:auto;}
+.decision{font-family:Georgia,'Times New Roman',serif;line-height:1.6;font-size:.9rem;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:18px;white-space:pre-wrap;}
+.actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+.empty{color:var(--sub);font-size:.85rem;text-align:center;padding:20px 0;}
+.cal-emp{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);}
+.cal-emp .name{width:150px;flex:0 0 150px;font-size:.76rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-track{flex:1;position:relative;height:20px;background:var(--bg);border-radius:4px;overflow:hidden;border:1px solid var(--line);}
+.cal-bar{position:absolute;top:2px;bottom:2px;background:var(--accent);border-radius:3px;opacity:.85;}
+.toast{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:20px;font-size:.85rem;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;}
+.toast.show{opacity:1;}
+.hol-tag{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:4px 10px;font-size:.76rem;margin:3px 4px 0 0;}
+.hol-tag button{border:none;background:none;color:var(--danger);cursor:pointer;font-weight:700;}
+.stat-bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:4px;}
+.stat-fill{height:100%;background:var(--accent);}
+#print-area{display:none;}
+.docv{font-family:'Times New Roman',Times,serif;line-height:1.5;font-size:.95rem;}
+.docv table{border-collapse:collapse;width:100%;font-size:.88em;margin:8px 0;}
+.docv th,.docv td{border:1px solid #444;padding:4px 6px;text-align:left;color:#000;font-size:inherit;text-transform:none;}
+@media print{ body{background:#fff!important;} body>*:not(#print-area){display:none!important;} #print-area{display:block!important;color:#000;background:#fff;font-size:12pt;} #print-area .docv{border:none!important;padding:0!important;} }
+</style>
+</head>
+<body>
+<div id="gate" style="position:fixed;inset:0;background:var(--bg);z-index:200;display:none;align-items:center;justify-content:center;padding:20px">
+  <div class="card" style="max-width:340px;width:100%">
+    <h2>Connexion</h2>
+    <p class="hint">Accès réservé au personnel RH.</p>
+    <label>Utilisateur</label><select id="gate-user"></select>
+    <label>Mot de passe</label><input type="password" id="gate-pass">
+    <div class="actions"><button class="btn" id="gate-go">Entrer</button></div>
+    <p class="hint" id="gate-err" style="color:var(--danger)"></p>
+  </div>
+</div>
+<header><h1>Gestion des Congés Administratifs</h1><p>Agence Urbaine de Guelmim–Oued Noun · Division des Affaires Administratives et Financières</p><p class="no-print" id="who-bar" style="margin-top:6px"></p></header>
+<nav id="nav"></nav>
+<main>
+  <div class="view" id="v-demande"><div class="card">
+    <h2>Nouvelle demande de congé</h2>
+    <div id="edit-banner" style="display:none;background:var(--pending-bg);color:var(--gold);padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:.85rem">Modification d'une demande existante — <a href="#" id="edit-cancel" style="color:inherit;text-decoration:underline">annuler la modification</a></div>
+    <p class="hint">Le nombre de jours est calculé automatiquement (hors samedi, dimanche et jours fériés).</p>
+    <label>Bénéficiaire</label><select id="d-emp"></select>
+    <div class="solde-box" id="d-solde"></div>
+    <div class="grid2">
+      <div><label>Grade</label><input type="text" id="d-grade" readonly></div>
+      <div><label>Service / Direction</label><input type="text" id="d-dir" readonly></div>
+    </div>
+    <label>Type de congé</label><div class="chips" id="d-type"></div>
+    <div id="admin-block">
+    <label>Motif (facultatif, congé exceptionnel)</label><div class="chips" id="d-motif"></div>
+    <div class="grid3">
+      <div><label>Date de la demande</label><input type="date" id="d-datedem"></div>
+      <div><label>Du</label><input type="date" id="d-from"></div>
+      <div><label>Au</label><input type="date" id="d-to"></div>
+    </div>
+    <div class="grid2">
+      <div><label>Nombre de jours (auto, modifiable)</label><input type="number" id="d-days" min="0"></div>
+      <div><label>Imputation du solde</label><select id="d-annee"></select></div>
+    </div>
+    <div class="solde-box" id="d-sim"></div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:14px"><input type="checkbox" id="d-etranger" style="width:auto"> Voyage à l'étranger prévu — ajouter l'Article 4 dans la décision</label>
+    </div>
+    <div id="special-block" style="display:none">
+      <div class="grid3">
+        <div><label id="sp-date-label">Date de début</label><input type="date" id="sp-date"></div>
+        <div><label>Jours (fixe, calendaires)</label><input type="text" id="sp-days" readonly></div>
+        <div><label>Date de fin (auto)</label><input type="text" id="sp-end" readonly></div>
+      </div>
+      <div id="sp-cert-wrap" style="display:none"><label>Date du certificat de naissance</label><input type="date" id="sp-cert"></div>
+    </div>
+    <label>Intérimaire(s) — tapez au moins 3 lettres du nom (utilisé pour Administrative / Garde / Exceptionnelle / Mariage)</label>
+    <div style="position:relative">
+      <input type="text" id="d-interim-search" placeholder="ex: has, rac, mou...">
+      <div id="d-interim-dd" style="display:none;position:absolute;z-index:10;top:100%;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;margin-top:4px;max-height:180px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+    </div>
+    <div class="chips" id="d-interim-chips" style="margin-top:8px"></div>
+    <div class="actions"><button class="btn" id="d-submit">Enregistrer la demande</button></div>
+  </div></div>
+
+  <div class="view" id="v-rh"><div class="card"><h2>Traitement RH</h2><p class="hint">Demandes en attente de décision.</p><div id="rh-list"></div></div>
+    <div class="card" id="rh-decision-card" style="display:none">
+      <h2>Décision de congé — aperçu</h2>
+      <div class="grid2"><div><label>N° de décision</label><input type="text" id="rh-num" placeholder="Attribue par le bureau d ordre"></div><div><label>Date de la décision</label><input type="date" id="rh-date"></div></div>
+      <div class="solde-box" id="rh-solde"></div>
+      <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="rh-etranger" style="width:auto"> Voyage à l'étranger — ajouter l'Article 4</label>
+      <div class="decision" id="rh-decision-text" style="margin-top:10px"></div>
+      <div class="card" id="notify-box" style="display:none;margin-top:14px">
+        <h2>Prévenir l'agent</h2>
+        <p class="hint" id="notify-name"></p>
+        <label>Numéro WhatsApp / SMS</label><input type="text" id="notify-tel" placeholder="06XXXXXXXX">
+        <label>Message (Français)</label><textarea id="notify-fr" rows="3"></textarea>
+        <label>Message (Arabe)</label><textarea id="notify-ar" rows="3" dir="rtl"></textarea>
+        <div class="actions">
+          <button class="btn" id="notify-wa">Envoyer sur WhatsApp</button>
+          <button class="btn ghost" id="notify-copy-fr">Copier (FR)</button>
+          <button class="btn ghost" id="notify-copy-ar">Copier (AR)</button>
+        </div>
+        <p class="hint">Le bouton WhatsApp ouvre une conversation pré-remplie — l'envoi final reste manuel (aucun SMS automatique n'est disponible dans cette application).</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="rh-validate">Valider et déduire le solde</button>
+        <button class="btn ghost" id="rh-copy">Copier le texte</button>
+        <button class="btn ghost" id="rh-print">Aperçu / Imprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="v-personnel">
+    <div class="card"><h2>Règles des soldes</h2>
+      <label style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0"><input type="checkbox" id="set-expiry" style="width:auto"> Annuler les soldes non consommés après <input type="number" id="set-years" min="1" style="width:64px;margin:0"> ans</label>
+      <p class="hint" style="margin:8px 0 0" id="set-info"></p>
+    </div>
+    <div class="card"><h2>Directeur/Directrice en fonction</h2>
+      <p class="hint">Utilisé automatiquement dans toutes les décisions imprimées. À mettre à jour en cas de changement.</p>
+      <div class="grid2">
+        <div><label>Civilité</label><select id="dir-genre"><option value="F">Madame (Directrice)</option><option value="H">Monsieur (Directeur)</option></select></div>
+        <div><label>Nom complet</label><input type="text" id="dir-name"></div>
+      </div>
+      <div class="grid2">
+        <div><label>N° du décret de nomination</label><input type="text" id="dir-decree"></div>
+        <div><label>Date de nomination (jj/mm/aaaa)</label><input type="text" id="dir-date" placeholder="26/12/2024"></div>
+      </div>
+      <div class="actions"><button class="btn ghost small" id="dir-save">Enregistrer</button></div>
+    </div>
+    <div class="card"><h2>Comptes d'accès</h2>
+      <p class="hint">Mots de passe utilisés pour ouvrir l'application.</p>
+      <div class="grid2">
+        <div><label>Mot de passe — Fatiha</label><input type="text" id="pw-fatiha"></div>
+        <div><label>Mot de passe — Sanaa</label><input type="text" id="pw-sanaa"></div>
+      </div>
+      <div class="actions"><button class="btn ghost small" id="pw-save">Enregistrer les mots de passe</button></div>
+    </div>
+    <div class="card"><h2>Jours fériés &amp; fêtes (calcul des jours)</h2>
+      <p class="hint">Dates lunaires 2026 à titre indicatif — à confirmer selon l'annonce officielle du Ministère des Habous.</p>
+      <div id="hol-list"></div>
+      <div class="grid2" style="margin-top:10px"><div><label>Date</label><input type="date" id="hol-date"></div><div><label>Libellé</label><input type="text" id="hol-label" placeholder="ex: Aïd Al Mawlid"></div></div>
+      <div class="actions"><button class="btn ghost small" id="hol-add">+ Ajouter</button></div>
+    </div>
+    <div class="card"><h2>Personnel &amp; soldes de congé</h2>
+      <p class="hint">Base issue du fichier BD_CONGE — modifiez directement le service, le grade, la civilité (M./Mme/Mlle), le droit annuel ou les soldes par année.</p>
+      <input type="text" id="pers-search" placeholder="Rechercher un agent par nom...">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="pers-showinactive" style="width:auto"> Afficher aussi les agents désactivés (mutation/démission)</label>
+      <div class="tablewrap"><table><thead><tr id="pers-head"></tr></thead><tbody id="pers-body"></tbody></table></div>
+      <div class="actions"><button class="btn ghost small" id="pers-add">+ Ajouter un agent</button><button class="btn ghost small" id="pers-newyear">+ Nouvelle année</button></div>
+      <div id="pers-add-form" style="display:none;margin-top:10px" class="grid2"><input type="text" id="pers-add-name" placeholder="Nom et prénom"><button class="btn small" id="pers-add-confirm">Ajouter</button></div>
+      <div id="pers-year-form" style="display:none;margin-top:10px" class="grid2"><input type="number" id="pers-year-val" placeholder="ex: 2027"><button class="btn small" id="pers-year-confirm">Ajouter l'année</button></div>
+    </div>
+  </div>
+
+  <div class="view" id="v-hist"><div class="card">
+    <h2>Historique des congés</h2>
+    <input type="text" id="hist-search" placeholder="Rechercher un agent...">
+    <div id="hist-list" style="margin-top:10px"></div>
+  </div></div>
+
+  <div class="view" id="v-etat"><div class="card">
+    <h2>État de congé — situation annuelle</h2>
+    <p class="hint">Situation détaillée d'un agent (droit annuel, congés pris, soldes par année), prête à imprimer.</p>
+    <div class="grid2"><div><label>Agent</label><select id="et-emp"></select></div><div><label>Année</label><select id="et-year"></select></div></div>
+    <div class="actions"><button class="btn" id="et-print">Aperçu / Imprimer</button></div>
+    <div id="et-preview" style="margin-top:14px"></div>
+  </div></div>
+
+  <div class="view" id="v-cal"><div class="card">
+    <div class="row" style="border:none"><h2 style="margin:0">Calendrier des congés validés</h2><div><button class="btn ghost small" id="cal-prev">←</button> <b id="cal-label" style="margin:0 8px"></b> <button class="btn ghost small" id="cal-next">→</button></div></div>
+    <div id="cal-body"></div>
+  </div></div>
+
+  <div class="view" id="v-stats"><div class="card">
+    <div class="row" style="border:none"><h2 style="margin:0">Statistiques mensuelles</h2><div><button class="btn ghost small" id="st-prev">←</button> <b id="st-label" style="margin:0 8px"></b> <button class="btn ghost small" id="st-next">→</button></div></div>
+    <p class="hint">Part de l'effectif ayant au moins un jour de congé validé sur le mois, globalement et par service.</p>
+    <div id="st-global" style="margin-bottom:14px"></div>
+    <div id="st-body"></div>
+  </div></div>
+</main>
+<div id="modal" class="no-print" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;overflow:auto;padding:20px">
+  <div style="max-width:840px;margin:0 auto;background:var(--panel);border-radius:14px;padding:16px">
+    <div id="modal-body"></div>
+    <div class="actions"><label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="modal-header" checked style="width:auto"> Avec en-tête et pied de page</label><button class="btn" id="modal-print">Imprimer</button><button class="btn ghost" id="modal-copy">Copier le texte</button><button class="btn ghost" id="modal-close">Fermer</button></div>
+  </div>
+</div>
+<div id="print-area"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const LS_EMP='conges_employees_v3', LS_DEM='conges_demandes_v3', LS_SEQ='conges_seq', LS_HOL='conges_holidays';
+let applyingRemote=false, dbNS=null, pushTimer=null, localClockAtLastEdit=0, gotFirstSnapshot=false;
+const seedEmployees=[{"nom": "ASRIRI BRAHIM", "grade": "HORS CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "CHEF DE DIVISION", "matr": 2, "genre": "H", "soldes": {"2025": 9, "2026": 22}}, {"nom": "RACHIDI JAMILA", "grade": "HORS CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "CHEF DE SERVICE", "matr": 3, "genre": "F", "soldes": {"2025": 44, "2026": 22}}, {"nom": "YAMANI HAYAT", "grade": "CADRE SUPPERIEUR", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 6, "genre": "F", "soldes": {"2025": 29, "2026": 22}}, {"nom": "DAOUDI BRAHIM", "grade": "HAUTE MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 81, "genre": "H", "soldes": {"2025": 19, "2026": 22}}, {"nom": "MAZZENE RACHID", "grade": "HORS CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "CHEF DE DEPARTEMENT", "matr": 8, "genre": "H", "soldes": {"2025": 22, "2026": 22}}, {"nom": "MAKINI YOUSSEF", "grade": "HORS CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "CHEF DE DIVISION", "matr": 9, "genre": "H", "soldes": {"2025": 19, "2026": 22}}, {"nom": "OULDTALEB HASSAN", "grade": "CADRE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 11, "genre": "H", "soldes": {"2025": 9, "2026": 22}}, {"nom": "GADDIMI TOUFIK", "grade": "HAUTE MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 14, "genre": "H", "soldes": {"2025": 32, "2026": 22}}, {"nom": "MAZBOUR ABDELLAH", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "CHEF DE SERVICE", "matr": 78, "genre": "H", "soldes": {"2025": 4, "2026": 22}}, {"nom": "ATIQ NAJAT", "grade": "HORS CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 17, "genre": "F", "soldes": {"2025": 11, "2026": 22}}, {"nom": "MOUJAHID YACIR", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "CHEF DE DIVISION", "matr": 20, "genre": "H", "soldes": {"2025": 30, "2026": 22}}, {"nom": "BOUSHABI ZAHRA", "grade": "HORS CADRE", "service": "SERVICE INFORMATIQUE", "fonction": "CHEF DE SERVICE", "matr": 22, "genre": "F", "soldes": {"2025": 7, "2026": 22}}, {"nom": "EL IDRISSI RAJAE", "grade": "CADRE SUPPERIEUR", "service": "SERVICE INFORMATIQUE", "fonction": "SANS RESPONSABILITE", "matr": 24, "genre": "F", "soldes": {"2025": 16, "2026": 22}}, {"nom": "AOUSS KHALIHNA", "grade": "HORS CADRE", "service": "CHARGE DE MISSION", "fonction": "CHARGE DE MISSION", "matr": 28, "genre": "F", "soldes": {"2025": 25, "2026": 22}}, {"nom": "AITLAHCEN RACHID", "grade": "CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "CHEF DE SERVICE", "matr": 29, "genre": "H", "soldes": {"2025": 24, "2026": 22}}, {"nom": "ZAHIDI KHALID", "grade": "CADRE SUPPERIEUR", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 30, "genre": "H", "soldes": {"2025": 2, "2026": 22}}, {"nom": "AHIZOUNE BOUCHRA", "grade": "", "service": "NON DEFINI", "fonction": "", "matr": "", "genre": "F", "soldes": {"2025": 15, "2026": 22}}, {"nom": "EL ALAOUI LALLA NEZHA", "grade": "CADRE SUPPERIEUR", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 32, "genre": "F", "soldes": {"2025": 17, "2026": 22}}, {"nom": "ARJDAL SGHIRA", "grade": "CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 33, "genre": "F", "soldes": {"2025": 11, "2026": 22}}, {"nom": "AZDOU RACHID", "grade": "MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 35, "genre": "H", "soldes": {"2025": 13, "2026": 22}}, {"nom": "QATAD HASSAN", "grade": "CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "CHEF DE SERVICE", "matr": 36, "genre": "H", "soldes": {"2025": 4, "2026": 22}}, {"nom": "BELHOUATE ESSALKA", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 37, "genre": "F", "soldes": {"2025": 30, "2026": 22}}, {"nom": "MALAH LAHBIB", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 38, "genre": "H", "soldes": {"2025": 44, "2026": 22}}, {"nom": "RAMZI SAID", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 48, "genre": "H", "soldes": {"2025": 24, "2026": 22}}, {"nom": "NAJI JAMAL", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 49, "genre": "H", "soldes": {"2025": 40, "2026": 22}}, {"nom": "KAJJAJ ABDERRAHIM", "grade": "HORS CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "CHEF DE DIVISION", "matr": 50, "genre": "H", "soldes": {"2025": 9, "2026": 22}}, {"nom": "M'RABTI SAMIR", "grade": "CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 51, "genre": "H", "soldes": {"2025": 9, "2026": 22}}, {"nom": "OUDINE OMAR", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 52, "genre": "H", "soldes": {"2025": 20, "2026": 22}}, {"nom": "AFOUKAL JALAL", "grade": "HORS CADRE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "CHEF DE DIVISION", "matr": 54, "genre": "H", "soldes": {"2025": 37, "2026": 22}}, {"nom": "HARIS FATIHA", "grade": "CADRE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 56, "genre": "F", "soldes": {"2025": 8, "2026": 22}}, {"nom": "BEN MOUSSA FATIMA ZAHRA", "grade": "", "service": "NON DEFINI", "fonction": "", "matr": "", "genre": "F", "soldes": {"2025": 12, "2026": 22}}, {"nom": "BOUMDIAN ZINEB", "grade": "HORS CADRE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "CHEF DE SERVICE", "matr": 58, "genre": "F", "soldes": {"2025": 22, "2026": 22}}, {"nom": "ELHAM ESSAAIDI", "grade": "DIRECTEUR", "service": "DIRECTION", "fonction": "DIRECTEUR", "matr": 63, "genre": "F", "soldes": {"2025": 30, "2026": 22}}, {"nom": "TAOUIL SOUAD", "grade": "CADRE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 66, "genre": "F", "soldes": {"2025": 19, "2026": 22}}, {"nom": "KHALLOUK FATIMA ZAHRA", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 67, "genre": "F", "soldes": {"2025": 11, "2026": 22}}, {"nom": "EL KADADRA ADILE", "grade": "HORS CADRE", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 68, "genre": "H", "soldes": {"2025": 16, "2026": 22}}, {"nom": "MALKI MOHAMED", "grade": "", "service": "NON DEFINI", "fonction": "", "matr": "", "genre": "H", "soldes": {"2025": 0, "2026": 22}}, {"nom": "EDDOUBI EL BATOUL", "grade": "", "service": "NON DEFINI", "fonction": "", "matr": "", "genre": "F", "soldes": {"2025": 11, "2026": 22}}, {"nom": "ABAAOU MOHAMED AMINE", "grade": "HAUTE MAITRISE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 72, "genre": "H", "soldes": {"2025": 12, "2026": 22}}, {"nom": "GOUSLA MOHAMMED", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 74, "genre": "H", "soldes": {"2025": 18, "2026": 22}}, {"nom": "CHOUBOU SANAA", "grade": "HAUTE MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 75, "genre": "F", "soldes": {"2025": 24, "2026": 22}}, {"nom": "BELASRI FAISSAL", "grade": "HAUTE MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 76, "genre": "H", "soldes": {"2025": 24, "2026": 22}}, {"nom": "BENALLA OMAR", "grade": "HAUTE MAITRISE", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 77, "genre": "H", "soldes": {"2025": 24, "2026": 22}}, {"nom": "ZINAT ECHARAF EL MIDAOUI", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DES ETUDES ET DE LA TOPOGRAPHIE", "fonction": "SANS RESPONSABILITE", "matr": 79, "genre": "F", "soldes": {"2025": 22, "2026": 22}}, {"nom": "MERYEM NAFID", "grade": "CADRE SUPPERIEUR", "service": "DEPARTEMENT DE LA GESTION URBAINE ET DE LA REGLEMENTATION", "fonction": "SANS RESPONSABILITE", "matr": 80, "genre": "F", "soldes": {"2025": 22, "2026": 22}}, {"nom": "ABDELKABIR JAAIFI", "grade": "MAITRISE", "service": "DIVISION DES AFFAIRES ADMINISTRATIVES ET FINANCIERES", "fonction": "SANS RESPONSABILITE", "matr": 82, "genre": "H", "soldes": {"2025": 22, "2026": 22}}];
+const seedHolidaysArr=[{"date": "2026-01-01", "label": "Nouvel An"}, {"date": "2026-01-11", "label": "Manifeste de l'Indépendance"}, {"date": "2026-01-14", "label": "Yennayer (Nouvel An Amazigh)"}, {"date": "2026-03-20", "label": "Aïd Al-Fitr"}, {"date": "2026-03-21", "label": "Aïd Al-Fitr (2e jour)"}, {"date": "2026-05-01", "label": "Fête du Travail"}, {"date": "2026-05-27", "label": "Aïd Al-Adha"}, {"date": "2026-05-28", "label": "Aïd Al-Adha (2e jour)"}, {"date": "2026-06-17", "label": "1er Moharram"}, {"date": "2026-07-30", "label": "Fête du Trône"}, {"date": "2026-08-14", "label": "Oued Eddahab"}, {"date": "2026-08-20", "label": "Révolution du Roi et du Peuple"}, {"date": "2026-08-21", "label": "Fête de la Jeunesse"}, {"date": "2026-08-25", "label": "Aïd Al Mawlid"}, {"date": "2026-08-26", "label": "Aïd Al Mawlid (2e jour)"}, {"date": "2026-10-31", "label": "Fête de l'Unité"}, {"date": "2026-11-06", "label": "Marche Verte"}, {"date": "2026-11-18", "label": "Fête de l'Indépendance"}];
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function load(key,fb){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fb;}catch(e){return fb;}}
+function save(key,val){try{localStorage.setItem(key,JSON.stringify(val));}catch(e){} if(!applyingRemote){localClockAtLastEdit=Date.now();pushState();}}
+let employees=load(LS_EMP,null);
+if(!employees){employees=seedEmployees.map(e=>({id:uid(),...e}));save(LS_EMP,employees);}
+(function ensureStatus(){const resigned=new Set(['AHIZOUNE BOUCHRA','BEN MOUSSA FATIMA ZAHRA','MALKI MOHAMED','EDDOUBI EL BATOUL']);let changed=false;employees.forEach(e=>{if(!e.status){e.status=resigned.has(e.nom)?'demission':'actif';changed=true;}if(!e.droitAnnuel){e.droitAnnuel=22;changed=true;}});if(changed)save(LS_EMP,employees);})();
+const CREST='data:image/jpeg;base64,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', LOGO2='data:image/jpeg;base64,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', LOGO3='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAUEBAYFBQUGBgYHCQ4JCQgICRINDQoOFRIWFhUSFBQXGiEcFxgfGRQUHScdHyIjJSUlFhwpLCgkKyEkJST/2wBDAQYGBgkICREJCREkGBQYJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCT/wAARCACLAIwDASIAAhEBAxEB/8QAHAAAAgMBAQEBAAAAAAAAAAAABQYABAcDAgEI/8QAShAAAQQBAgQDBQQHBAYJBQAAAQIDBAUGABEHEiExE0FRFCJhcYEVMkKRFiNSYnKC0TM0Q7EXY5OhssEkJSY3RFNUc/B1kqKz0v/EABkBAAMBAQEAAAAAAAAAAAAAAAIDBAEFAP/EADURAAEDAgMGBgEDAwUBAAAAAAECAxEAIRIxQQRRYYGhsRNxkcHR8CIjMuEFQvEUM2KC0sL/2gAMAwEAAhEDEQA/AP1Tqampr1eqamppCz3izAxOQmmq4y7nIXzytQI+55CexWR2+Xf5d9MaaW6rCgSaBxxLYxKNO06fErIrkudJZjR2xut15YSlI+JOs0tePFfIlqrcOpp+TTh03joKWR8ebbcj6bfHSpPxqbdWLEniVZS7Wzd/WRMWqTuUDy59jsgeqiR/EdP9Pht4/DTGW7GxKq8q2lA8Yj/WPkd/4B/Nq8MMNCXDiPoPk8oHGoy864YQI7/A78KUrWz4ozWvHvcjx7B4ixuG1OJL23w33JPyI0EOL11yQqbm+cZKo9/s6C94f0UoFO31065BMxfhpbQa+uw6Vc3dihS2HEpDzrpT33dcJVv59PLTfhlvktwxJeyLH26QBSfZmhIDq1J26823Yg7aadoU2jGhIA/6jpc9aWGQtWBRk8z8DpWPDhRi6+pxXiK+f21lhJP0KhryrhpQwxzx4XEuqUPxoZS6E/7Pc6PV2V8T8hiXlrVz8eahVUuQx4UllQWoN9e46dtuu40747ltxlXDeNkVXXRl20hgqRFdWUtKcCyk9fIdCRpru0bQ3mdYzy85pbbLK8hxyrLowuKp5LVFxccadH3YmQx1sb/Dd0EfkNMTfEriFijaXcqxJu1r9t/tCnXzjl/aIG4/Pl13qOLci+nO0l9gcxxTMoQZLkYJlR2nSdtlbjYD6npphOF46i0kRsatXcftmUh11iufASAexXHO6CD/AAj56W6sA4X0Dp3THY0baCRLKu/Yz3FXcQ4nYtmwCKqyR7VtuYj/AOreH8p7/TfTVrFMzwJtxRkZPThK0HmTkePtlDjZ/afjjc/NSd/prxUcQsm4dtxv0leTk2LP7Jj3sI86kDy5/U/A9fQntpC9iSsYmDyPsdfKx4U5O1KQYeHP5HvcVt2pqpU28C9r2bCslNS4jw5kOtncH+h+GreucQQYNWggiRU1NTU1lbU1NTSFxZz2RitdHqaVBkZFbK8CE0kblG52Lm3w7D4/AHTGmlOrCE5mgccDaSpVDuIfESyet04Rg6BJv3xtIkjqiCjzJPYK2/L57DQnDcTFS/IqsUeTKtSoouMpkJ8QMrP3mmAfvL9fIfi3PTX3FcOdp0uYlVSlG2kpS/kl2g7rZCuoYbUfxq69fIbqPUjR3MbxOC4/j8vGVxE4/EntMTkx9lgMK3TvzDf8R3J7k7fHXUkJAZZ168T/API5mufBUS67p04D3PIUz12P1+F0816ujKek+Gt9595RW/KWEk7rWepJ/IeQGs44f4fZ5vVV2cSs1umrOS+XltsODwW20rILIR2HQfLr2OtlBStIIIUkj6EaylrHc34a2Vi1h1bDu6KwdMhqI8+GlQnVd9tyN0f08u5m2d0qSoBQCjFzqNRf7anvNgFJiUjd3tXnjslRqaXJaqwDD9VYhpUtjZZYS4OVR9Oh5eh9dEMQcx/Fb72ebxEkX9xZcsdLL8lK0777jlQnflP11XpcQp8R4bS6nPrCE23ZyVzJY8bkQFqUk8iD3O3KO3x1WoZ+L1qkrwThvPsSk+5N9lDCD8Q88eY/TVFi0WkyQJE2APM8ZpNw4HDAJi15HIcKR4vDX9K6LMbOCuSbaDdSfDj+IrwZCEq5i2UDzO56/Ia2LBMrqp/DuNcQorcCLDjKDsVA2EdTafeRt6dNx8CNI2R8crzF7BcB3EIQkggussT/ABlNFR2SFlCNgo+Q330YqOIl3lNCqT+gbVpVyUqaeTBsG3FDyUhbawkg+oOj2lD7qAXB+M2/IenxQMKabWQg3i9j98678Fwmq4cv5FYqDZsX5NpIcV5JJPX8k7/XS3jeTJxfD8h4n2rYNjfyFewsr7lA3S0gfDoSfgnRyzyHE8lxlzB3ZM7DFPNpYQxOi+AUoBHuJKvcIO23RWrMrhovIcshItmIzmI00FLNdDSvmD7ik8pUseWwH+Xx0GJIUpTwjEZ/6jIDzMelHCoSlu8COZ1Pl71UxK64kUC6tnIYCMirrPkImwlDxYal9dnOwKRv3/3+WmC9wUsuSrDGExmX5G/ttW+N4ViPMLT2QsjssD5g6DWC6vgjRPxKdydYTLR/lq6p10ucrhG3KgdwgE7nz6ga847YVHCmvelZvkqDf3LglS0qWpfKrbYJQhO+wA6b7ddvQDQKxKPiNDPIAfu5cO9EmEjA4csyTlz40lw353DeVJyPEWJS6Vt0Ju8ckH9dXL81D93zSsdNu+47bjjmRVuVU8e2qpAfivp3B80nzSoeRHmNLNjGg5nDZy3DJsSRZMILaVg/qprf4ozw9D5bjdJIOs3qbpHDG8ZyGrbfRh1y+WLCCse/VSh0UkjyKTvt6p6fs6NxA2pOULHXgeO465G9ChZ2c/8AA/ZHDeOYr9AamvLLrchpDzS0uNuJCkLSdwoHqCDr1rkV0qr2E+PVQJE+W4Go8ZtTriz+FKRuTrDMXnTbSVY8Tpsbx7Syf+zcchOdkk7pCvkBvufQLPnpo472cmZBqMLrl7TMglJaXt+FlJG5Pw3I+gOiuMVMeTlC0xGx9l4pHFZBSfuqkqSC6v5hPKnf1KtdNgBpkrOauw+TbyBqB4lx0IGnc/A619FthnDmqRj+QXkUTJqVOzFPElyU4599xewJAJ3A38gB5aCyuB+DZNWuScbnSIEeUn71fK8Rhz5pJIPXy3GgFXIj4VlVvI4oUKXXrl/9XcKbEiIlvsGxuN0Afn23HTfRKui1mH8VaSLhMsOVt8w69NgMueIw2hI3S8nvy7ncfQjz207AtuS2szEz/aYufTj0pWJK4C0iJiNRp996bOG87KIhk4vk9etTtW2gMWjY/Uy2uyf59h1+XXY9xOfcZIFLafo5Tz69uxJKX50tR9nheu+3Va/3R9dGs4vbGZYxsNxx7wrWeguyZY6/Z8XfZTn8Z7JHr10co8RpceqmKyFAZ8FkfecQFrWo91KJ6lRPUnUmJsK8V1Oeg7/x7Z0wsjw21Zant/PvWa0V1wrr5YtLfLYt/dHqqdP3WUH0bRtytj0AH11aznjdRCvYrsYvoRmz1+CZqubwoLf4nFdOp27AeenvJpdHitFNuZ0OKGIjZWQGk7rPkkdO5OwHz0B4bYeY1fIv72HHVdXSxJfQWxtGR/hspHkEp23+Py00ONKHjOAmMgSPjIfFLKHAfCQQJzsfnWs6yK94fU+GwKnH72NMlC1iS5chRUXpBS4Ct1ZI6+Z+Gr2RZ7iOM336XYffwXnH1BNrVNqKUzUb/wBogbbB0b77+f8Am28YoENnG65TcWOgm4hAlLYG48UdNPf2VX/+hi/7JP8ATRnaWwhKyCZJm4vlnb/FCGFlRSCBEaefGkmdxT4Y31f7PZXNXJjvJBUxKbKttx2II6HSY7m2OYMozMJzGHMrknmdoJjqygjz8BwjdCv3TuDpjbr4nDXN0xnYrBxnInj4KltgiDNP4Nz2Qvy9DrRvsqv/APQxf9kn+mllbTMQCUniI7ZiiCXHMyAocDPes7qZWM5L9pcT6l2RY2MaApLUOQrf2JaUElIR+Eq9fPqR31X4O4/RzqdjLLSTGtsguSpx1+QpK1Nnc/qkJPbYDrt/lo5mWMyqmWMwxaOlNnFRyzISBsiyjjugjtzgdUn6aWvsbEqg1WdYfhM66kTlFxpMJ5SUxlkHcqQTsn8QPTYEbaYFBbZCCb2GVon8TlbWdfOhKSlYKgLe+ozvpGlNGA4VNxXIsqluJjMQLOWh2JGjn3UpAO6iNhyk79vh6baH8QsehQ5T8+U3vR3YTCuEDsys9GZQ9ClWySfQg+Wlp/jZlkumsLiLQ0tXCgPKjPKsJhU4l0f4YbSAoq9Bt6+h09YQ9dZrgq/0zrmI7lglxBZQkp5mFDoSk7lJ2J8/Q6FaHmleM7GgMG+XcZ+dEhTTifCb88vvlS7wXvJtY9Z8Pbtzewo1n2ZZ/wAaOT0I+A3BHwUPTWqa/PV/JmYrYUOWuqUufjs00Vuod32f8Nw/xNq7+pHpr9BtOIebQ62oKQsBSVDsQex0rb2/yDo/u76+ufOj2Nf4ls6dtPTLlWNrsGrPjZfXkk88LEqtQTv2C+Uk/X3l/lq2jIrvFKDGcco4UeVlGQhyc4qSSG2ivdxxa9up25iP5dKuMLVZ4nntmSfFvLtqAFeZSt5II/Jw60/PsDm3z9XdY9PRW3tQT7K44ndtxBGxbWPQ/wDM+uq3sCFpQvIW4SE68JN6mbxqSVozN/U/Apau73iHisB1/MaSkySgI2lmCCFtIPclCuigPl9Ro7iWJ4VhkOfmlIhTcOZEEnmUvmSyyBzkI36gHzBPcDQK4e4u5JVSMdkY5TQRMbMd+yTK5kBtXRRSjcncjf1+WiWcUyaPh1S4ZEdUpM6TEqefsVIKgVn6pSr89LVcBuQCo3wm0bzpTBYlcEgC0i81Xp5s7F8AueIMqK29dWu09TbxICGiQllrfuAlBB+ZOjol8TFAEVuKdRv/AHp//wDjR3JcajZJjcqhcccjR5DYa52QOZABBG2/Ty0Fwx21jZJkVNY3Ei1agpiKZcfbbQpPiIWVD3EgeQ1P4iVpUuBI3zlYCPKnYClQTJj3uTND7TJ8gog05nFDUO0Lqgh+TBWt8RVbjlW4hafub+Y7dDo3m+UyaDHmLKobiTHZMmPHZ8VZ8JXirCQrdPl136a+ZzmlVhzMA3TPPX2L5iOrI5ktAoJ3UnzT02PwOk25ooOJwvAmMG54eTFpeLaVqUqqVvulaSk7qY369D7vy0TaErwqUmOx3xx798WooxJBnuP47dmGR/pGloCJFPh7yEqCwlx95QCh2PVHcaq2+U57jiIkq1rMdMR6YxFWY77qljxHAjcApA6b648H7ODXwbHG3HgzLiSn5Tbbi9w5EWsqbcQok86OUjqD89K9nf4/dZha3Zr5N7uuNGoo6HFpEqU1zFamwCAUJPLusjYbaalqXFIKRA4Z9edKU5CAoKueP8VpedZNVY5Xs+3RBZTH3QINelAW5IeH3eUHtsevN5aEN2XFVxtKzQ4u2VAEoVNd3T8DsnbfQabLh8NI7mX5nJRZ5XPT4bDDZ91lP/ksg/dQN/eX5/XY6m0suNIWRsVJB21OqGkiEyDqcuXDjrT0y4oyY4D3rO5eY53Q2lKze09A3Es7BqDzxZLi1pK9+uxAHYHVjH0fobxBn46n3Ky7QqzgJ/C0+CA+2Pgdwvb56FY5j0/OrN+3t8isXGabIHjGghDYaT4S9k9eXm7Ejvo1xVH2fFosiR0cqLVhalf6lw+E4PkQoflpygnEGREkQYnPTOlAqw+IZgZTu1pbxbhg7d5jZZpltczBSqUpyLVhXMjmT7oec8iTtuPXffRrJ+KcWpzTHKiBZVcuLOkKjzkNrC3WSQA2dwdgOY9d/TVnJuFlflFy/Y3t7cOwV8vJXCUW47ewAPQeuxPl30CybDuFsWi+zGLKkx91t5t9Mpp1tT6FIVv3USo79Rog426oFwk2iALC3rahKFtpIQALzJNz/mvfEqgTMtbiuCfcyGmWtA27y4pC0H5lKtv5dHuDF6cg4b08hxfM6w0YrhPfds8o/wBwB+uveYvsuqxC6jOpfaFoyhLo7LafbU3v8jzJOsv4c5f+hES7o1K2Ee3kJSN+wHKP+WtS2p7ZsIzEe47RWFYafxHIz7HvNfOGQ5+GtWT3ey6OV/H32z/yGmRuvsOK2aZJEsMisayrpJIiMwK93wlOHY7uLPnvsf8A4OqzgavYuH1owroqmymO8ofspDzQ/rrR804b0U60XkSL6Xi9ktIS7MiyQyHQP2weh8uvTT33EpdVNiSYMTGR7UplBU2nUCJGU5jvS5OrrXhHkuPGvyOytKm3mpgvV9g74qk8340H4f0776P8VZcmJcYY5FguWDqLRbiIqFpQXFBlewBV0Hcnr6aWMfb4fVWXQZVlnUvKr3xUswy+6XksrUdgRyggHr3J6d9OXFIiEnGrlXRFfdx1OK/Zbc5myf8A8xpKz+qiRJg3iJzj/NNSP01QYEi0zGVHcbu7i3U+LTG5NKGwnkL0ht3xd999uQnbbp39dDcd/wC8PL//AGoH/wCtzTaSEjckADzOlHHFBXELLykgjw4HUf8AtuagQQQsgRb3FVqBBQCZv7GqfEhpt+7wpp1tLja7gpUhY3CgWHNwR5jVB+PJ4TvOKQ25OwiQo+KwQXF1JV3IH4mDv1H4dEeIqgi/whSiEgXPUk/6lzTotbDjKudTSmlApPMQUkeh03xShtAIkEGRzPWg8PEtRFiPgdKxfLuGwS1GkY/AdvKOSeaJHiSfDchKc7pQ55xl7+8n8O+40ZjQ4PCyGzLlsouMvskCNDhxU7BIHZllP+GynzV59z10u43mkvH7a4r8TrzPjNSX2jRrd5THWHCkPsKPdgke+n8B3PbR3hHOh3eS3thMkotLppLSHrLf9UOYq3Zjg9mk8u3N+I7nttq50OBB8S6R6md+7jv451G34ZWMFifQeW/hu6Vwy3DZMDAsiyPI30T8klxglbg/s4jfOn9SyPJI8z3J1rcb+7tfwD/LSjxfdbHDm9QVpCywNk79fvp03Rv7u1/AP8tc95xS2kqVvPYVc2gIcIG4dzSZwp/uGQ//AF+d/wAY0ucVskyCVhd1Ek4ZMixAB/01UtlSUhLiSF8oPN12HTv10xcKlpELIElSQo387pv1++NfeMKy9h6atHV21nRYKB6lTqSf9yTp6VAbXcTcb6SoE7PYxY0J4rwMJ9irbjMEzpDgQGI0OK6oKkKOx2CUkbn4k+ek+BZcPqAtv2vCe1qoRIHts2GXkI37FXMTtp14pU9tHusay2pq126KNxzx4Df31IWAOdA8yNv8tC77i4MmpJlJT4bkcqxmsrjhmTD5G0FQI3Urc9Bvv/TT9nKi0kJkjX8oi+7rekvYQ4omAdLTP3K1M2dOwnsPqZFaWTD+0a5cYsgBHJ7Q3y8u3lsdfmvPZLkTPclbZ3CftN89PXm1vrtBIxvAMMxqWsOSRZwWnOU7gFLhdUB6gcpH01kiMZdzC9yS0aQVoVbyUggfEH/nqr+mqQ3iJMi/cR2pG3BS8IAvbtTnBqlt5jxOw8DlVZxjYRE+q9uYbfzLH5apZfhuN33s2d22YM1ibSMy+mG/GD55/DSFBKObdXUHoB30y8U98O4iYrnCRyxVrNdOUB0CFb7E/RSj/KNc2eF1Bk2RTaa5XLQumcU9BTHdCA5EfUXE9dtyEr8RPQjy0pD0BL2IgEXi+Vjn5Jo1NSS3EkG0+o7mkmnsMlrJCV1mQVOP0ydj7XZwYsNx0futJBWR/wDOmt4yaqYzfCpkFh5DjdhE5o7yfu8xAU2sfDflOh9VwkwenUHI+Ow3XR/iSQX1E+u6ydNrTTbLaWmkJbbQAlKUjYJA7ADUO17WhxSVNiCOAHaq9n2dSElKzY8SazK4uJWacEZzrUd92z9nEaTGaSVOJkNrSlxOw677gn5HXrHMlxLE0PppsPyaF7Ryl7kqXzzlO+2++/bc6t2yzw3y9y92Ixy8cSiw27QpXZLx9Er6BR9djrQUqStIUkhSSNwQehGsccSlEAfiTOcbrHy/mtQgqVM/kLZdedZxf5biuUR2o91iGSzmml+IhLtO/slW22/QehOlddM9/ohYjGksTHF94xg+zOeN7N7STtyfe25Nalm679jHZEnGlNmxjFL6WVoChIQk7qbHoVDcA6s4tkkLLaKJcQFbsyEblB+82sdFIV6EHca1D5Q2FIFgd/2J9qxTWJZSo3jd9yrM7Fvh/Y10Sv8A0PyiKxEcU417NVSG1AKPvp5gN+VXUEaq5S1jt1IqHaHEbqNZszoSEvKq32UNx0ODcb7coAGtA4j5DYY5WVb9c4hDkm1ixHCpAVu2tWyh189vPTXrf9SUBK76/wB3rpWeAFEotppWSZjAolcQrCTkuLW1zGXCjJiuRYbryEKBc5xunpv1TpkTxVr0pCRjmWgAbAfZDuuttk9jNzyuxihcbSmKPbLd4oCg21tshr4KUevqAN9OWluuDCkOCbb/AG0mjbQcSig67vuVYpJj0VnmNBOx/Eb6BOVcJkzZUiA80goIVzElR2HvEHTfZq/SnijXVzfvw8baM6SfL2lwFLSPmE8yvqNHc1yxnEqj2gNGVPkKDEGGj78l4/dSB6eZPkNcsDxd3GaZXt7okW891UuwkD/EeV3A/dSNkj4DRqelHiHcQJM55nkKFLUKwDzOnl60vcR56oE9udE4kRcceYa5FQn0odbcO5O6kE82/XbtpMpePGTfaHsApY+VtpOwlVDTzZV9FJ/oNOOUcC8cyK2fumZM+vs3nPGU804FpK/UoWCPoNtW6Ch4hY9ZRI7t7T29KF8rpdieBIQjb8PJ7pPz05tzZ/Cgwo8bdQL8zS1of8SRYcL9Cbelc84uEtX9Q66nw0U8CXdyEKP3Clvw2wfjzLV+WqPAGlDPDpiZKbCnbCS9LJPfYnlH/BvpO4i3L1vXWTsL35eV2DdRXJHcxGFbKUPgp0q+hGtxoqlmhpYNVHA8KGwhhPx5QBv9dA/+ls4RqT2/kxyomf1HyrQe/wDAnnQzP8UazXErClc5Q483zMrP4HU9Un8+/wACdZfh+Ty5FBBvHW3PtzEFKrriPt+sehE7FW3mU8oV80K9dbjrHuJNXL4e5YzxGp45egv7R7qIkdHEHYc+35fUD1Oh2JeIFk63HnqOY6xRbUjCQ6OfzyPStdjSGZcdqRHcS6y6gLQtJ3Ckkbgj4baR+JnE9vh77Cl2umOCS+2PHCEltTYI8QA82/Py9gQNcMPu4mOvw69mQHsYuD4tLL391haupiqPl135N/inuNOdnj9VdOIXZQI8wobW0kPoCwlK9ubYHp12HXvpAQhp0eIJT9+mmlSnG/wMH79FRr2fJKXadXOojTGiHIsxCeYoPkoAkDp5b6yzIE5zwvSzGqLJh7FEqITKlxVSXa5B7JXynmLY8lddh31rg9nrIXVSWY0ZvqpauiEJHck+gHfSRVcQS5Bm5HcEsUU19ManiojqXIlDqCvlG5PP1ITt0A389FsylCSEynd8caF9KTEmDv8AnhVevTxKtobU2vyvEpUZ0cyHWYa1JUPmFaUbOvz/AIWSJFwi1pU1ttLSqctqIssQlnp4pRvuAo9yPh00zVlBR3cyXOwK7mYzatq5pcLwClvmPYuxXANt/VO2iEmxz2FGdh3eJ1mRxHEFtxyukhsuJI2PM076+gOqkuYVQAI1BAB628u1TlGJMkmdCCSPmk/iLGz1VPTv2V7j8uM7axDHMWKsfrCr3Fk8x3T5kDvohl2QcSsTbitLu8enWE50MxIEeCvxX1E9SN1dAB1JPQaSrpvM4ERqlpcUyB2mjzWbCJHnRypcNbairwkrQTzNk9t+o02YjIyGLYvX83Cr+6yWUnlVJmeFFYjI/wDLaClEpT6nbc6pUgJQCcJAm1vo49N9IC8SiBIJjf8ATwohjWB8SMbbluRr/HjJsHjKlPPxHHHHHD5FW46DsBtsNVsoyfiFjDjUNWQY7PtpHSPWxK9xb7p9dub3U/vHYaPWDWdWcN6Ve3dXiFU0kre9hPjSAjz3dXslPzSDqxgYwqCzPVjBXNsW2/FlLfSszZHmCS4Aog+W3u6lLpu44AryAjmfjpVGAWQgkeZ7D5rph2H2hnoyfMZDU3IFNeG000NmICD3S2P2j+JX07d63EPiq3glpVwXqucsSpCQp1LaVIda2IUG/e3Kwoo6EDXLh9d3tNJjY7mCle1WDRm176ySVb+8uMon8be/1Hy05WeN0906XbKujy1lksAvJ5uVBO5A37bnbqOvQemkLUEvS8JGkZRwpyQVNQ0YPH3q5DkKlxWn1x3oynEhRae250fA7Ejf66W8/tpDUJihrHfDtblRYaWP/DtbfrXz6BKd9v3inRq6uYGNVL1jPdLcaOkfvKWewSkd1KJ2AHmTrE8utLqxsTTRUf8AbDJkBlxoK3FPX9w0SOylDdSz8/3dZsjBcXi0H30GZ9Na3aXsCcOv3qdP4ohw7rY+a8Q3L2K1tjmLsiuqkke6tYG3OPXzVv8AFOts0Gw/FoWG47DpYI/Vx0e8sjYurPVSz8SdGdL2t4OrlOQsPL+c6PZ2i2i+ZuamuUqKxOjOxZLSHmHkFDjaxulaSNiCNddTU1PrBbapXwimSam1jPWnD24c+Kl17hPQg9wQeoI77AjqOr9j+WuUIiQLyeidVy9hWX4ILchJ+628eyXPLfsr4HcadLCviWsJ6DOjtyYr6ShxpxO6VA+R1jFvh+QcKfa3KSKckwyVuZlM/wC+thJ7lPfcfEfUeeuqh1G0jCv93f4PQ+dc5bamDiR+3t8jqK0vNcbm5ZHhVSJSGKlx7mskgkOPtDqG0kdgo7BXw0FtmEZfZTqCuUmmtsXeYkVz/RSTzNdCW9v7PYqQdA8Ky0uRA9hc03tW2N3aKY6ET4I9GlqPvpHklR+SvLTCv9DuI0tCi7IhXkQFPKHFw58ceaSAQoj806XgW0YVkOGR4jpe26aZiS4JTmevketBHMnS3Hn5nZQlR8ix1pyokwWVAtSXXFILeyu5SSUkenMdG04zm6YH2gcxcNxyeIYhit+xc22/h8u3Pt5c3Nv56sW3DeCrDJtDUKVHfedTLTJkLU6tySlSVpW4o9VblIB+Gq0rLMvk1666Phk1i6cQW/HceaMJtRG3ieIFcxSO+3Lv5a9jCh+lGesZc9JmswlJ/UnLSc+WuVVq/iBb5caSFQMw4UqdAXPlvS0qdTHShzwihKQRzHnBG5I6DVedmlxPZYonHm620+20VE2VEG4Sgtl0Lb5t+UrSABvvsSe+uNpi9dh9fjEV5y7iqgsOMG7rAVKbUdlKS4gJVuhaiojcHYjVelwORb0d/Lh+1wn5dizPq3bDm8ZTjITyuuA9RzqCumw91Xby0wJZAxAQNPX404eoEu/tOevp86/R8y2NdxE2eJGbJt0uxUW9WuVsp1amHUKcjqIA599kkdPxbaK5VZw51XjvEOnWkuRn2UqI7vRnlhtxlXqQVA7eSk6IwIOQX+VVVzcVDVO1VMPoCBJS8qQ66EpO3L2QAknr1JI6avfoDi0KxVbqhpZKHfaihT6xHQ738Xw9+QK899vjpZeQnCFZjOIvNiOYA60YaUqSnLj6g8jNXspxmNlVYIj7rkd5pxL8aUz/AGkZ1J3StJ9fL4gka7Xl/X4xWmbaSvDbTshPTdbyz2ShI6qUfIDS/O4iIm+KxisVNu41uHZzi/CgRtu5W8eitvRG5+WsykZTOur8xsUKssyogpVbrb5YNYk9/AQeg/jO5Pqe2hZ2VaxC7Afb7ufIGid2hCDKcz95/ZIojmeZzmLKJKnQjJyJ4/8AUeOp9/2Iq6CRIA6F3bsn8P5nTlwv4dLxJiRb3L3tuSWR8SZJUebk36+Gk+nqfM/ADXrh3wuiYap21sJCrXIZW6pE93ckE90o36gfHufl009a3adpSE+E1lqd/AcO+ZrzDBxeI5noN389tKmpqamufVlTU1NTXq9U1NTU16vVn2YcGKPI5f2tWOvUN0k86ZkL3eZXqpI23+Y2Oky6ZzqjaTHzLFYua1zH9nYQwUy2gPMKSOYH6fXW6amrGttWkAL/ACA35jyOYqVzZEKJKbH7mMqwuk4mVAIaq87sahxPT2DJIvtCEn9nxRsoD5qOnaBm2SPpSWI2LXqT2XW2/IT/ACrSf+LTRc4lQZEki2poE0n8TzKSr/7u41jvEThdiFOpS4FOmOrbf3H3dvy5tVNr2d9WEgg+QPUYTU60vNCZkcx3kVpYy3JQPfwOxJ9W50ZQ/PnGub+YZOhBV+hns4/bmWrDaR8+UqOvydblcCQGoz8htHoHlf1004ljVXdvtiwYckBW2/M+4P8AJWrV/wBLbQnGYjyP/qpU/wBQWo4RM+Y/81slxxKnRUkWGV4fRJ80xVLsJA+Gw5Rv9DpOdy6NlEkN09LkeezAejtkfCgtq9fBRsjb+Lb560zGeE2DwIrMlrG4K3SN+Z8Ke6/zk6d2I7MVpLTDTbTaeiUISEpHyA1zztTDf+2kk+na/WrBs7rn71e/e3Ssgi8KcszXwl55dph1zexbpavZDSR5AkdP+I/HWo0GOVOL16K+ngsw46fwtp6qPqo9yfidEdTUj20uOiDYbhYVU1s6G7jPec6mpqamp6dU1NTU16vV/9k=';
+let settings=load('conges_settings',{expiryOn:true,expiryYears:2,director:{genre:'F',name:'ELHAM ESSAAIDI',decree:'2.24.1166',date:'26/12/2024'},users:{fatiha:{label:'Fatiha',pass:'2026'},sanaa:{label:'Sanaa',pass:'2026'}}});
+if(!settings.director) settings.director={genre:'F',name:'ELHAM ESSAAIDI',decree:'2.24.1166',date:'26/12/2024'};
+if(!settings.users) settings.users={fatiha:{label:'Fatiha',pass:'2026'},sanaa:{label:'Sanaa',pass:'2026'}};
+function curYear(){return new Date().getFullYear();}
+function isExpired(y){return settings.expiryOn && (curYear()-Number(y))>=settings.expiryYears;}
+function validYears(){return years().filter(y=>!isExpired(y));}
+function totalSolde(e){return validYears().reduce((s,y)=>s+(e.soldes[y]||0),0);}
+function pad2(n){return String(n).padStart(2,'0');}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function boldDyn(t){let s=t;s=s.replace(/\b(\d{2}\/\d{2}\/\d{4})\b/g,'<b>$1</b>');s=s.replace(/((?:M\.|Mme|Mlle|Madame|Monsieur)\s+[A-ZÀ-Ü'\- ]{2,}?)(?=,|\s+(?:est|sont|peut|en tant que|pour)\s)/g,'<b>$1</b>');return s;}
+function forceYearOf(d){return (d.annee&&d.annee!=='auto')?String(d.annee):null;}
+function allocate(e,days,forceYear){
+  const ys=validYears(), alloc={}, reste={}; ys.forEach(y=>{alloc[y]=0;reste[y]=e.soldes[y]||0;});
+  let left=days, deficit=0;
+  if(forceYear && ys.includes(forceYear)){alloc[forceYear]=days;reste[forceYear]-=days;deficit=Math.max(0,days-(e.soldes[forceYear]||0));}
+  else{ys.forEach(y=>{const s=Math.max(0,e.soldes[y]||0),t=Math.min(s,left);alloc[y]=t;reste[y]-=t;left-=t;});
+    if(left>0&&ys.length){const l=ys[ys.length-1];alloc[l]+=left;reste[l]-=left;deficit=left;}}
+  return {ys,alloc,reste,deficit};
+}
+function isActive(e){return (e.status||'actif')==='actif';}
+let demandes=load(LS_DEM,[]);
+let seq=load(LS_SEQ,1);
+let holidays=load(LS_HOL,null);
+if(!holidays){holidays=seedHolidaysArr;save(LS_HOL,holidays);}
+function holSet(){return new Set(holidays.map(h=>h.date));}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function fmt(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
+function years(){return Object.keys((employees[0]||{soldes:{}}).soldes).sort();}
+const ACC_FIX={'SUPPERIEUR':'SUPÉRIEUR','SUPPERIEURE':'SUPÉRIEURE','GENERAL':'GÉNÉRAL','GENERALE':'GÉNÉRALE','INGENIEUR':'INGÉNIEUR','INGENIEURE':'INGÉNIEURE','SECRETAIRE':'SECRÉTAIRE','CHARGE':'CHARGÉ','CHARGEE':'CHARGÉE','ETUDES':'ÉTUDES','RESEAUX':'RÉSEAUX','TELECOMMUNICATION':'TÉLÉCOMMUNICATION','DEPARTEMENT':'DÉPARTEMENT','GEOMETRE':'GÉOMÈTRE','ARCHEOLOGIE':'ARCHÉOLOGIE','AMENAGEMENT':'AMÉNAGEMENT','TOPOGRAPHE':'TOPOGRAPHE'};
+function fixAcc(s){let w=String(s).toUpperCase();Object.keys(ACC_FIX).forEach(k=>{w=w.split(k).join(ACC_FIX[k]);});return w;}
+function cap(s){if(!s)return'';s=fixAcc(s).toLowerCase();return s.charAt(0).toUpperCase()+s.slice(1);}
+function title(e){if(!e)return'M.';return e.genre==='F'?'Mme':(e.genre==='Mlle'?'Mlle':'M.');}
+function typeLabel(t){if(t.indexOf('Garde')===0)return "de garde d'enfant (hadana)";if(t.indexOf('Except')===0)return "exceptionnel";return "administratif";}
+function workDays(fromISO,toISO){if(!fromISO||!toISO)return 0;const hs=holSet();let d=new Date(fromISO+'T00:00:00'),end=new Date(toISO+'T00:00:00'),n=0;while(d<=end){const dow=d.getDay();const iso=d.toISOString().slice(0,10);if(dow!==0&&dow!==6&&!hs.has(iso))n++;d.setDate(d.getDate()+1);}return n;}
+
+const tabs=[['demande','Nouvelle demande'],['rh','Traitement RH'],['personnel','Personnel'],['hist','Historique'],['etat','État de congé'],['cal','Calendrier'],['stats','Statistiques']];
+const nav=document.getElementById('nav');
+tabs.forEach(([id,label],i)=>{const b=document.createElement('button');b.textContent=label;b.onclick=()=>showView(id);b.dataset.id=id;if(i===0)b.classList.add('active');nav.appendChild(b);});
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('v-'+id).classList.add('active');[...nav.children].forEach(b=>b.classList.toggle('active',b.dataset.id===id));if(id==='rh')renderRH();if(id==='personnel'){renderPersonnel();renderHolidays();}if(id==='cal')renderCal();if(id==='hist')renderHist();if(id==='stats')renderStats();if(id==='etat')renderEtat();}
+document.getElementById('v-demande').classList.add('active');
+
+function fillEmpSelect(sel){sel.innerHTML='';employees.filter(isActive).slice().sort((a,b)=>a.nom.localeCompare(b.nom)).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nom;sel.appendChild(o);});}
+function fillYearSelect(sel){sel.innerHTML='';const a=document.createElement('option');a.value='auto';a.textContent='Automatique (ancien solde d’abord)';sel.appendChild(a);validYears().forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent='Imputer sur '+y+' uniquement';sel.appendChild(o);});sel.value='auto';}
+const dEmp=document.getElementById('d-emp'), dAnnee=document.getElementById('d-annee');
+fillEmpSelect(dEmp); fillYearSelect(dAnnee);
+
+let interimSelected=[]; let editingId=null;
+function saveDemande(obj){if(editingId){const idx=demandes.findIndex(x=>x.id===editingId);if(idx>-1){obj.id=editingId;obj.createdAt=demandes[idx].createdAt;demandes[idx]=obj;}editingId=null;document.getElementById('edit-banner').style.display='none';}else{demandes.push(obj);}save(LS_DEM,demandes);}
+function exitEdit(){editingId=null;document.getElementById('edit-banner').style.display='none';}
+document.getElementById('edit-cancel').onclick=(ev)=>{ev.preventDefault();exitEdit();document.getElementById('sp-date').value='';document.getElementById('d-from').value='';document.getElementById('d-to').value='';document.getElementById('d-days').value='';interimSelected=[];renderInterimChips();};
+function startEdit(d){
+  editingId=d.id; dEmp.value=d.employeeId; refreshSoldeBox();
+  [...typeChips.children].forEach(c=>c.classList.toggle('sel',c.textContent===d.type));
+  updateFormForType();
+  document.getElementById('d-datedem').value=d.dateDem||'';
+  if(d.special){document.getElementById('sp-date').value=d.from;document.getElementById('sp-cert').value=d.dateCert||'';recalcSpecial();}
+  else{document.getElementById('d-from').value=d.from;document.getElementById('d-to').value=d.to;document.getElementById('d-days').value=d.days;dAnnee.value=d.annee;document.getElementById('d-etranger').checked=!!d.etranger;[...motifChips.children].forEach(c=>c.classList.toggle('sel',(d.motifs||[]).includes(c.textContent)));refreshSim();}
+  interimSelected=(d.interimIds||[]).map(empById).filter(Boolean); renderInterimChips();
+  document.getElementById('edit-banner').style.display='block';
+  showView('demande'); window.scrollTo(0,0);
+}
+const diSearch=document.getElementById('d-interim-search'), diDD=document.getElementById('d-interim-dd'), diChips=document.getElementById('d-interim-chips');
+function renderInterimChips(){diChips.innerHTML='';interimSelected.forEach(e=>{const c=document.createElement('div');c.className='chip sel';c.innerHTML=`${e.nom} <span style="margin-left:6px;cursor:pointer" data-id="${e.id}">×</span>`;c.querySelector('span').onclick=()=>{interimSelected=interimSelected.filter(x=>x.id!==e.id);renderInterimChips();};diChips.appendChild(c);});}
+diSearch.oninput=()=>{const q=diSearch.value.trim().toLowerCase();if(q.length<3){diDD.style.display='none';diDD.innerHTML='';return;}
+  const selectedIds=new Set(interimSelected.map(x=>x.id));
+  const matches=employees.filter(isActive).filter(e=>e.id!==dEmp.value && !selectedIds.has(e.id) && e.nom.toLowerCase().includes(q)).slice(0,8);
+  diDD.innerHTML=matches.length?'':'<div style="padding:8px 10px;color:var(--sub);font-size:.8rem">Aucun résultat</div>';
+  matches.forEach(e=>{const opt=document.createElement('div');opt.style.cssText='padding:8px 10px;cursor:pointer;border-bottom:1px solid var(--line);font-size:.85rem';opt.textContent=e.nom;opt.onclick=()=>{interimSelected.push(e);renderInterimChips();diSearch.value='';diDD.style.display='none';};diDD.appendChild(opt);});
+  diDD.style.display='block';};
+document.addEventListener('click',(ev)=>{if(!diSearch.contains(ev.target)&&!diDD.contains(ev.target))diDD.style.display='none';});
+document.getElementById('d-datedem').value=new Date().toISOString().slice(0,10);
+
+function empById(id){return employees.find(e=>e.id===id);}
+function refreshSoldeBox(){const e=empById(dEmp.value);const box=document.getElementById('d-solde');if(!e){box.innerHTML='';document.getElementById('d-sim').innerHTML='';return;}
+  document.getElementById('d-grade').value=cap(e.grade); document.getElementById('d-dir').value=cap(e.service);
+  box.innerHTML=years().map(y=>`<div style="${isExpired(y)?'opacity:.5':''}">Solde ${y}${isExpired(y)?' (expiré)':''}<b>${e.soldes[y]??0} j</b></div>`).join('')+`<div>Solde global<b>${totalSolde(e)} j</b></div>`;
+  refreshSim();}
+function refreshSim(){const e=empById(dEmp.value);const box=document.getElementById('d-sim');const days=parseInt(document.getElementById('d-days').value||'0',10);if(!e||!days){box.innerHTML='';return;}
+  const A=allocate(e,days,dAnnee.value==='auto'?null:dAnnee.value);
+  box.innerHTML=A.ys.map(y=>`<div class="${A.alloc[y]>0?'on':''}">Reste ${y} après congé<b>${A.reste[y]} j</b></div>`).join('')+`<div>Global après congé<b>${A.ys.reduce((s,y)=>s+A.reste[y],0)} j</b></div>`+(A.deficit>0?`<div style="border-color:var(--danger);color:var(--danger)">⚠ Solde insuffisant<b>${A.deficit} j</b></div>`:'');}
+dEmp.onchange=refreshSoldeBox; dAnnee.onchange=refreshSoldeBox; refreshSoldeBox();
+
+const typeChips=document.getElementById('d-type');
+['Administrative',"Garde d'enfant (hadana)",'Exceptionnelle','Mariage','Paternité','Maternité'].forEach((t,i)=>{const c=document.createElement('div');c.className='chip'+(i===0?' sel':'');c.textContent=t;c.onclick=()=>{[...typeChips.children].forEach(x=>x.classList.remove('sel'));c.classList.add('sel');updateFormForType();};typeChips.appendChild(c);});
+function currentType(){return [...typeChips.children].find(c=>c.classList.contains('sel'))?.textContent||'Administrative';}
+function isSpecialType(t){return t==='Mariage'||t==='Paternité'||t==='Maternité';}
+function specialDays(t){return t==='Mariage'?10:t==='Paternité'?15:t==='Maternité'?98:0;}
+function recalcSpecial(){const t=currentType();const n=specialDays(t);document.getElementById('sp-days').value=n?n+' jours':'';const start=document.getElementById('sp-date').value;if(start&&n){const dd=new Date(start+'T00:00:00');dd.setDate(dd.getDate()+n-1);document.getElementById('sp-end').value=fmt(dd.toISOString().slice(0,10));}else document.getElementById('sp-end').value='';}
+function updateFormForType(){const t=currentType();const sp=isSpecialType(t);document.getElementById('admin-block').style.display=sp?'none':'block';document.getElementById('special-block').style.display=sp?'block':'none';document.getElementById('sp-cert-wrap').style.display=(t==='Paternité'||t==='Maternité')?'block':'none';document.getElementById('sp-date-label').textContent=t==='Mariage'?'Date du mariage':'Date de début du congé';recalcSpecial();}
+document.getElementById('sp-date').addEventListener('change',recalcSpecial);
+updateFormForType();
+const motifChips=document.getElementById('d-motif');
+['Mariage','Naissance','Circoncision','Omra / Hajj','Hospitalisation','Décès'].forEach(t=>{const c=document.createElement('div');c.className='chip';c.textContent=t;c.onclick=()=>c.classList.toggle('sel');motifChips.appendChild(c);});
+
+function recalcDays(){const f=document.getElementById('d-from').value,t=document.getElementById('d-to').value;if(f&&t){document.getElementById('d-days').value=workDays(f,t);refreshSim();}}
+document.getElementById('d-days').addEventListener('input',refreshSim);
+['d-from','d-to'].forEach(id=>document.getElementById(id).addEventListener('change',recalcDays));
+
+document.getElementById('d-submit').onclick=()=>{
+  const empId=dEmp.value; if(!empId){toast('Choisissez un bénéficiaire');return;}
+  const curType=currentType();
+  if(isSpecialType(curType)){
+    const start=document.getElementById('sp-date').value; const n=specialDays(curType);
+    if(!start){toast('Choisissez la date de début');return;}
+    const dd=new Date(start+'T00:00:00'); dd.setDate(dd.getDate()+n-1);
+    const toSp=dd.toISOString().slice(0,10);
+    const interimIds=curType==='Mariage'?interimSelected.map(x=>x.id):[];
+    saveDemande({id:uid(),employeeId:empId,type:curType,motifs:[],from:start,to:toSp,days:n,dateDem:document.getElementById('d-datedem').value||start,dateCert:document.getElementById('sp-cert').value,interimIds,annee:'auto',etranger:false,special:true,status:'attente',createdAt:Date.now()});
+    toast("Demande enregistrée — à traiter dans l'onglet RH");
+    document.getElementById('sp-date').value=''; recalcSpecial(); interimSelected=[]; renderInterimChips();
+    return;
+  }
+  const from=document.getElementById('d-from').value, to=document.getElementById('d-to').value;
+  const days=parseInt(document.getElementById('d-days').value||'0',10);
+  const dateDem=document.getElementById('d-datedem').value;
+  if(!from||!to||!days){toast('Complétez les dates');return;}
+  const type=curType;
+  const motifs=[...motifChips.children].filter(c=>c.classList.contains('sel')).map(c=>c.textContent);
+  const interimIds=interimSelected.map(e=>e.id);
+  saveDemande({id:uid(),employeeId:empId,type,motifs,from,to,days,dateDem,interimIds,annee:dAnnee.value,etranger:document.getElementById('d-etranger').checked,status:'attente',createdAt:Date.now()});
+  toast("Demande enregistrée — à traiter dans l'onglet RH");
+  document.getElementById('d-from').value=''; document.getElementById('d-to').value=''; document.getElementById('d-days').value='';
+  interimSelected=[]; renderInterimChips(); document.getElementById('d-etranger').checked=false; refreshSim();
+};
+
+function renderRH(){
+  const list=document.getElementById('rh-list'); const pending=demandes.filter(d=>d.status==='attente');
+  if(!pending.length){list.innerHTML='<div class="empty">Aucune demande en attente.</div>';document.getElementById('rh-decision-card').style.display='none';return;}
+  list.innerHTML='';
+  pending.forEach(d=>{const e=empById(d.employeeId);const row=document.createElement('div');row.className='row';
+    row.innerHTML=`<div><b>${e?e.nom:'—'}</b><br><span style="color:var(--sub);font-size:.78rem">${d.type} · du ${fmt(d.from)} au ${fmt(d.to)} · ${d.days} j${d.special?'':(' · '+(d.annee==='auto'?'imputation auto':'imputé sur '+d.annee))}${d.etranger?' · étranger':''}</span></div><div style="display:flex;align-items:center;gap:10px"><span class="badge attente">En attente</span><button class="btn ghost small" data-tr="${d.id}">Traiter</button><button class="btn ghost small" data-ed="${d.id}">Modifier</button><button class="btn ghost small" style="color:var(--danger);border-color:var(--danger)" data-del="${d.id}">Supprimer</button></div>`;
+    row.querySelector('[data-tr]').onclick=()=>openDecision(d.id);
+    row.querySelector('[data-ed]').onclick=()=>startEdit(d);
+    const delBtn=row.querySelector('[data-del]');
+    delBtn.onclick=()=>{if(delBtn.dataset.armed==='1'){demandes=demandes.filter(x=>x.id!==d.id);save(LS_DEM,demandes);toast('Demande supprimée');renderRH();}else{delBtn.dataset.armed='1';delBtn.textContent='Confirmer ?';setTimeout(()=>{delBtn.dataset.armed='0';delBtn.textContent='Supprimer';},3000);}};
+    list.appendChild(row);});
+}
+
+function openDecision(demId){
+  const d=demandes.find(x=>x.id===demId); const e=empById(d.employeeId); const interims=d.interimIds.map(empById).filter(Boolean);
+  const card=document.getElementById('rh-decision-card'); card.style.display='block'; card.scrollIntoView({behavior:'smooth'});
+  document.getElementById('rh-num').value='';
+  document.getElementById('rh-date').value='';
+  document.getElementById('rh-etranger').checked=!!d.etranger;
+  function renderSpecial(){
+    const num=document.getElementById('rh-num').value;
+    const dir=settings.director||{genre:'F',name:'ELHAM ESSAAIDI',decree:'2.24.1166',date:'26/12/2024'};
+    const dirTitle=dir.genre==='H'?'Directeur':'Directrice'; const dirCivil=dir.genre==='H'?'Monsieur':'Madame'; const dirLe=dir.genre==='H'?'Le':'La';
+    const head='DECISION DE CONGE EXCEPTIONNEL';
+    const vuCommon=`Vu le Dahir portant loi n° 1.93.51 du 22 Rabia I 1414 (10 Septembre 1993) instituant les Agences Urbaines ;\nVu le décret n° 2.93.67 du 4 Rabia II 1414 (21 Septembre 1993) pris pour l'application du dahir portant loi précitée ;\nVu le décret n° 2.03.221 du 14 Rabia I 1425 (04 Mai 2004) relatif à la création de l'Agence Urbaine de Guelmim Oued Noun ;\nVu le décret n° ${dir.decree} du Joumada II 1446 relatif à la nomination de ${dirCivil} ${dir.name} en tant que ${dirTitle} de l'Agence Urbaine de Guelmim Oued Noun à compter du ${dir.date} ;\nVu le statut régissant le personnel de l'Agence Urbaine de Guelmim Oued Noun, visé le 23 Mai 2007, et notamment l'article 17 ;`;
+    let vuTail, arts;
+    if(d.type==='Mariage'){
+      vuTail=`Vu l'Amendement n° 02/2011 des règlements provisoires régissant les personnels des Agences Urbaines, visé le 22 Décembre 2011 sous numéro 8098 ;\nVu la demande présentée par l'intéressé(e) en date du ${fmt(d.dateDem)} ;`;
+      const interimTxt=interims.length?interims.map(i=>title(i)+' '+i.nom).join(' et '):'____________________';
+      arts=`ARTICLE 1 : Un congé Exceptionnel pour mariage de (${d.days} jours), allant du ${fmt(d.from)} au ${fmt(d.to)} inclus, est accordé à ${title(e)} ${e.nom}, ${e.grade?cap(e.grade)+' ':''}en fonction.\n\nARTICLE 2 : ${interimTxt} ${interims.length>1?'sont désigné(e)s':'est désigné(e)'} pour assurer l'intérim au période de son Congé Exceptionnel.`;
+    } else {
+      const label=d.type==='Paternité'?'de paternité':'de maternité';
+      const dur=d.type==='Paternité'?'15 Jours':'14 Semaines';
+      vuTail=`Vu l'Amendement n° 02/2011 des règlements provisoires régissant les personnels des Agences Urbaines, visé le 22 Décembre 2011 sous numéro 8098 ; et notamment l'article 21 ;\nVu le Certificat de Naissance présenté par ${title(e)} ${e.nom} en date du ${fmt(d.dateCert)} ;`;
+      arts=`ARTICLE 1 : Un congé ${label} à plein traitement de ${dur}, allant du ${fmt(d.from)} au ${fmt(d.to)} inclus, est accordé à ${title(e)} ${e.nom}, ${e.grade?cap(e.grade)+' ':''}en fonction.`;
+    }
+    const txt=`${head}\n\n${dirLe} ${dirTitle} de l'Agence Urbaine de Guelmim Oued Noun\n\n${vuCommon}\n${vuTail}\n\nDECIDE\n\n${arts}`;
+    document.getElementById('rh-decision-text').textContent=txt;
+    document.getElementById('rh-solde').innerHTML="<div>Ce congé n'est pas décompté du solde administratif annuel.</div>";
+    return {num,txt,A:{deficit:0,ys:[],alloc:{},reste:{}},reliq:'—'};
+  }
+  function render(){
+    if(d.special) return renderSpecial();
+    const num=document.getElementById('rh-num').value;
+    d.etranger=document.getElementById('rh-etranger').checked;
+    const isExcept=d.type==='Exceptionnelle';
+    let A={deficit:0,ys:[],alloc:{},reste:{}}, anneeTxt='', reliq='—';
+    if(!isExcept){
+      A=allocate(e,d.days,forceYearOf(d));
+      const used=A.ys.filter(y=>A.alloc[y]>0);
+      anneeTxt=(used.length?used:A.ys.slice(-1)).join(' et ')||curYear();
+      const parts=A.ys.filter(y=>A.reste[y]>0).map(y=>`${A.reste[y]} jour${A.reste[y]>1?'s':''}/${y}`);
+      reliq=parts.length?parts.join(' et '):`0 jour/${A.ys[A.ys.length-1]||curYear()}`;
+    }
+    const motifLine=d.motifs&&d.motifs.length?` (${d.motifs.join(', ')})`:'';
+    const tl=typeLabel(d.type);
+    const interimTxt=interims.length?interims.map(i=>title(i)+' '+i.nom).join(' et '):'____________________';
+    const art4=d.etranger?`\n\nARTICLE 4 : ${title(e)} ${e.nom} peut bénéficier de son congé ${tl} à l'intérieur et à l'extérieur du Maroc.`:'';
+    const dir=settings.director||{genre:'F',name:'ELHAM ESSAAIDI',decree:'2.24.1166',date:'26/12/2024'};
+    const dirTitle=dir.genre==='H'?'Directeur':'Directrice';
+    const dirCivil=dir.genre==='H'?'Monsieur':'Madame';
+    const dirLe=dir.genre==='H'?'Le':'La';
+    const head=isExcept?'DECISION DE CONGE EXCEPTIONNEL':'DECISION DE CONGE ADMINISTRATIF';
+    const art1=isExcept
+      ?`ARTICLE 1 : Un congé ${tl} de (${pad2(d.days)} jours), allant du ${fmt(d.from)} au ${fmt(d.to)} inclus, est accordé à ${title(e)} ${e.nom}, ${e.grade?cap(e.grade)+' ':''}en fonction.`
+      :`ARTICLE 1 : Un congé ${tl} de (${pad2(d.days)} jours) au titre de l'année ${anneeTxt}, allant du ${fmt(d.from)} au ${fmt(d.to)} inclus, est accordé à ${title(e)} ${e.nom}, ${e.grade?cap(e.grade)+' ':''}en fonction.`;
+    const art2=`ARTICLE 2 : ${interimTxt} ${interims.length>1?'sont désigné(e)s':'est désigné(e)'} pour assurer l'intérim de ${title(e)} ${e.nom}, pendant la période de son congé ${isExcept?'exceptionnel':'administratif'}.`;
+    const art3=isExcept?'':`\n\nARTICLE 3 : le reliquat résultant du présent congé ${tl} est de ${reliq}.`;
+    const txt=`${head}
+
+${dirLe} ${dirTitle} de l'Agence Urbaine de Guelmim Oued Noun
+
+Vu le Dahir portant loi n° 1.93.51 du 22 Rabia I 1414 (10 Septembre 1993) instituant les Agences Urbaines ;
+Vu le décret n° 2.93.67 du 4 Rabia II 1414 (21 Septembre 1993) pris pour l'application du dahir portant loi précitée ;
+Vu le décret n° 2.03.221 du 14 Rabia I 1425 (04 Mai 2004) relatif à la création de l'Agence Urbaine de Guelmim Oued Noun ;
+Vu le décret n° ${dir.decree} du Joumada II 1446 relatif à la nomination de ${dirCivil} ${dir.name} en tant que ${dirTitle} de l'Agence Urbaine de Guelmim Oued Noun à compter du ${dir.date} ;
+Vu le statut régissant le personnel de l'Agence Urbaine de Guelmim Oued Noun, visé le 23 Mai 2007, et notamment l'article 17 ;
+Vu l'Amendement n° 02/2011 des règlements provisoires régissant les personnels des Agences Urbaines, visé le 22 Décembre 2011 sous numéro 8098 ;
+Vu la demande présentée par l'intéressé(e) en date du ${fmt(d.dateDem)}${motifLine} ;
+
+DECIDE
+
+${art1}
+
+${art2}${art3}${art4}`;
+    document.getElementById('rh-decision-text').textContent=txt;
+    document.getElementById('rh-solde').innerHTML=isExcept?"<div>Ce congé exceptionnel n'est pas décompté du solde administratif annuel.</div>":(A.ys.map(y=>`<div class="${A.alloc[y]>0?'on':''}">Solde ${y}<b>${e.soldes[y]??0} → ${A.reste[y]} j</b></div>`).join('')+`<div>Global<b>${totalSolde(e)} → ${A.ys.reduce((s,y)=>s+A.reste[y],0)} j</b></div>`+(A.deficit>0?`<div style="border-color:var(--danger);color:var(--danger)">⚠ Solde insuffisant<b>${A.deficit} j en dépassement</b></div>`:''));
+    return {num,txt,A,reliq};
+  }
+  let state=render();
+  document.getElementById('rh-num').oninput=()=>state=render();
+  document.getElementById('rh-etranger').onchange=()=>state=render();
+  document.getElementById('rh-validate').onclick=()=>{
+    state=render();
+    state.A.ys.forEach(y=>{e.soldes[y]=state.A.reste[y];}); save(LS_EMP,employees);
+    d.status='validee'; d.decisionNum=state.num; d.decisionDate=document.getElementById('rh-date').value; d.decisionText=state.txt; d.alloc=state.A.alloc; d.reliqTxt=state.reliq; save(LS_DEM,demandes);
+    seq++; save(LS_SEQ,seq);
+    toast('Décision validée — soldes mis à jour'); card.style.display='none'; renderRH(); refreshSoldeBox();
+    showNotifyBox(e);
+  };
+  document.getElementById('rh-copy').onclick=()=>{navigator.clipboard?.writeText(state.txt).then(()=>toast('Texte copié')).catch(()=>toast('Copie impossible'));};
+  function showNotifyBox(emp){
+    const box=document.getElementById('notify-box'); box.style.display='block';
+    document.getElementById('notify-name').textContent='Destinataire : '+emp.nom;
+    document.getElementById('notify-tel').value=emp.tel||'';
+    document.getElementById('notify-fr').value='Bonjour, votre demande de congé a été validée. Merci de vous présenter au bureau d\'ordre pour récupérer votre décision.';
+    document.getElementById('notify-ar').value='السلام عليكم, تمت الموافقة على طلب رخصتكم الادارية. يرجى التوجه الى مكتب الضبط لاستلام القرار. وشكرا';
+    box.scrollIntoView({behavior:'smooth'});
+  }
+  document.getElementById('notify-wa').onclick=()=>{let t=document.getElementById('notify-tel').value.replace(/[^\d+]/g,'');if(t.startsWith('0'))t='212'+t.slice(1);const msg=encodeURIComponent(document.getElementById('notify-fr').value);window.open('https://wa.me/'+t+'?text='+msg,'_blank');};
+  document.getElementById('notify-copy-fr').onclick=()=>{navigator.clipboard?.writeText(document.getElementById('notify-fr').value).then(()=>toast('Message FR copié'));};
+  document.getElementById('notify-copy-ar').onclick=()=>{navigator.clipboard?.writeText(document.getElementById('notify-ar').value).then(()=>toast('Message AR copié'));};
+  document.getElementById('rh-print').onclick=()=>{state=render();showDoc(decisionHTML(state.txt),state.txt);};
+}
+
+function renderHolidays(){
+  const list=document.getElementById('hol-list'); list.innerHTML='';
+  holidays.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(h=>{
+    const tag=document.createElement('span'); tag.className='hol-tag'; tag.innerHTML=`${fmt(h.date)} — ${h.label} <button>×</button>`;
+    tag.querySelector('button').onclick=()=>{holidays=holidays.filter(x=>x!==h);save(LS_HOL,holidays);renderHolidays();};
+    list.appendChild(tag);
+  });
+}
+document.getElementById('hol-add').onclick=()=>{const date=document.getElementById('hol-date').value,label=document.getElementById('hol-label').value||'Jour férié';if(!date){toast('Choisissez une date');return;}holidays.push({date,label});save(LS_HOL,holidays);document.getElementById('hol-date').value='';document.getElementById('hol-label').value='';renderHolidays();toast('Jour férié ajouté');};
+
+function distinctVals(field){const s=new Set();employees.forEach(e=>{if(e[field])s.add(cap(e[field]));});return [...s].sort();}
+function optsHtml(list,cur){const c=cap(cur);let h='<option value="">—</option>';list.forEach(v=>{h+=`<option value="${esc(v)}" ${v===c?'selected':''}>${esc(v)}</option>`;});h+='<option value="__other__">+ Autre…</option>';return h;}
+function serviceOpts(cur){return optsHtml(distinctVals('service'),cur);}
+function gradeOpts(cur){return optsHtml(distinctVals('grade'),cur);}
+function renderPersonnel(){
+  const ys=years(); const showInactive=document.getElementById('pers-showinactive').checked;
+  const q=(document.getElementById('pers-search').value||'').trim().toLowerCase();
+  document.getElementById('pers-head').innerHTML='<th>Nom &amp; prénom</th><th>Service</th><th>Grade</th><th>Civilité</th><th>Droit annuel</th>'+ys.map(y=>`<th>Solde ${y}${isExpired(y)?' (expiré)':''}</th>`).join('')+'<th>Solde global</th><th>Statut</th><th></th>';
+  const body=document.getElementById('pers-body'); body.innerHTML='';
+  employees.slice().filter(e=>showInactive||isActive(e)).filter(e=>!q||e.nom.toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom)).forEach(e=>{
+    const st=e.status||'actif'; const g=e.genre||'H';
+    const tr=document.createElement('tr'); if(st!=='actif')tr.style.opacity='.55';
+    tr.innerHTML=`<td>${esc(e.nom)}</td><td><select class="inline" style="width:170px" data-f="service">${serviceOpts(e.service)}</select></td><td><select class="inline" style="width:130px" data-f="grade">${gradeOpts(e.grade)}</select></td><td><select class="inline" data-f="genre"><option value="H" ${g==='H'?'selected':''}>M.</option><option value="F" ${g==='F'?'selected':''}>Mme</option><option value="Mlle" ${g==='Mlle'?'selected':''}>Mlle</option></select></td><td><input class="inline" type="number" data-f="droitAnnuel" value="${e.droitAnnuel??22}"></td>`+ys.map(y=>`<td><input class="inline" type="number" style="${isExpired(y)?'opacity:.4':''}" value="${e.soldes[y]??0}" data-y="${y}"></td>`).join('')+`<td><b>${totalSolde(e)} j</b></td><td><select class="inline" data-f="status"><option value="actif" ${st==='actif'?'selected':''}>Actif</option><option value="mutation" ${st==='mutation'?'selected':''}>Muté(e)</option><option value="demission" ${st==='demission'?'selected':''}>Démissionné(e)</option></select></td><td><button class="btn ghost small" data-etat>État</button> <button class="btn ghost small" data-editp style="margin-top:4px">Modifier</button> <button class="btn ghost small" data-delp style="margin-top:4px;color:var(--danger);border-color:var(--danger)">Supprimer</button></td>`;
+    [...tr.querySelectorAll('input[data-f],select[data-f]')].forEach(inp=>inp.onchange=()=>{
+      let v=inp.value;
+      if(v==='__other__'){const custom=prompt('Nouvelle valeur :');if(!custom){renderPersonnel();return;} v=custom.toUpperCase();}
+      e[inp.dataset.f]=inp.dataset.f==='droitAnnuel'?parseInt(v||'22',10):v;
+      save(LS_EMP,employees);toast('Enregistré');
+      if(inp.dataset.f==='status'||inp.dataset.f==='service'||inp.dataset.f==='grade'){renderPersonnel();fillEmpSelect(dEmp);refreshSoldeBox();}
+    });
+    [...tr.querySelectorAll('input[data-y]')].forEach(inp=>inp.onchange=()=>{e.soldes[inp.dataset.y]=parseInt(inp.value||'0',10);save(LS_EMP,employees);toast('Enregistré');renderPersonnel();refreshSoldeBox();});
+    tr.querySelector('[data-etat]').onclick=()=>showDoc(etatHTML(e,'all'),'');
+    const delP=tr.querySelector('[data-delp]');
+    delP.onclick=()=>{if(delP.dataset.armed==='1'){employees=employees.filter(x=>x.id!==e.id);save(LS_EMP,employees);toast('Agent supprimé définitivement');renderPersonnel();fillEmpSelect(dEmp);}else{delP.dataset.armed='1';delP.textContent='Confirmer ?';setTimeout(()=>{if(delP){delP.dataset.armed='0';delP.textContent='Supprimer';}},3000);}};
+    body.appendChild(tr);
+  });
+}
+document.getElementById('pers-showinactive').onchange=renderPersonnel;
+document.getElementById('pers-search').oninput=renderPersonnel;
+document.getElementById('pers-add').onclick=()=>{const f=document.getElementById('pers-add-form');f.style.display=f.style.display==='none'?'flex':'none';document.getElementById('pers-add-name').focus();};
+document.getElementById('pers-add-confirm').onclick=()=>{const nom=document.getElementById('pers-add-name').value.trim();if(!nom){toast('Entrez un nom');return;}const s={};years().forEach(y=>s[y]=22);employees.push({id:uid(),nom:nom.toUpperCase(),grade:'',service:'',fonction:'',genre:'H',status:'actif',droitAnnuel:22,soldes:s});save(LS_EMP,employees);document.getElementById('pers-add-name').value='';document.getElementById('pers-add-form').style.display='none';renderPersonnel();fillEmpSelect(dEmp);refreshSoldeBox();toast('Agent ajouté — complétez sa civilité, son service et son grade');};
+document.getElementById('pers-newyear').onclick=()=>{const f=document.getElementById('pers-year-form');f.style.display=f.style.display==='none'?'flex':'none';document.getElementById('pers-year-val').focus();};
+document.getElementById('pers-year-confirm').onclick=()=>{const y=document.getElementById('pers-year-val').value.trim();if(!/^\d{4}$/.test(y)){toast('Année invalide');return;}employees.forEach(e=>{if(!(y in e.soldes))e.soldes[y]=e.droitAnnuel||22;});save(LS_EMP,employees);document.getElementById('pers-year-val').value='';document.getElementById('pers-year-form').style.display='none';renderPersonnel();fillYearSelect(dAnnee);refreshSoldeBox();toast('Année '+y+' ajoutée');};
+
+function refreshRules(){
+  document.getElementById('set-expiry').checked=!!settings.expiryOn; document.getElementById('set-years').value=settings.expiryYears;
+  const c=curYear(),x=settings.expiryYears;
+  document.getElementById('set-info').textContent=settings.expiryOn?`Règle activée : un solde de l'année N est annulé à partir de l'année N+${x} (en ${c}, les soldes de ${c-x} et avant sont annulés). Les données ne sont pas supprimées : désactiver la règle les rétablit.`:'Règle désactivée : aucun solde ne expire.'.replace('ne expire',"n'expire");
+}
+function applyRules(){settings.expiryOn=document.getElementById('set-expiry').checked;settings.expiryYears=Math.max(1,parseInt(document.getElementById('set-years').value||'2',10));save('conges_settings',settings);refreshRules();renderPersonnel();fillYearSelect(dAnnee);refreshSoldeBox();toast('Règle enregistrée');}
+document.getElementById('set-expiry').onchange=applyRules; document.getElementById('set-years').onchange=applyRules; refreshRules();
+
+function renderHist(){
+  const q=(document.getElementById('hist-search').value||'').toLowerCase();
+  const body=document.getElementById('hist-list');
+  const valid=demandes.filter(d=>d.status==='validee'||d.status==='annulee').filter(d=>{const e=empById(d.employeeId);return !q||(e&&e.nom.toLowerCase().includes(q));}).sort((a,b)=>(b.decisionDate||'').localeCompare(a.decisionDate||''));
+  if(!valid.length){body.innerHTML='<div class="empty">Aucune décision trouvée.</div>';return;}
+  body.innerHTML='';
+  valid.forEach(d=>{const e=empById(d.employeeId);const canceled=d.status==='annulee';const row=document.createElement('div');row.className='row';if(canceled)row.style.opacity='.55';
+    row.innerHTML=`<div><b>${esc(e?e.nom:'—')}</b><br><span style="color:var(--sub);font-size:.78rem">N° ${esc(d.decisionNum)} · ${esc(d.type)} · du ${fmt(d.from)} au ${fmt(d.to)} · ${d.days} j · reliquat ${esc(d.reliqTxt||(d.resteApres+' j/'+d.annee))}</span></div><div style="display:flex;gap:8px;align-items:center"><span class="badge ${canceled?'attente':'validee'}">${canceled?'Annulée':'Validée'}</span><button class="btn ghost small" data-view>Voir / Imprimer</button>${canceled?'':'<button class="btn ghost small" data-editv>Modifier</button><button class="btn ghost small" data-cancel style="color:var(--danger);border-color:var(--danger)">Annuler</button>'}</div>`;
+    row.querySelector('[data-view]').onclick=()=>{if(!d.decisionText){toast('Texte de la décision indisponible');return;}showDoc(decisionHTML(d.decisionText),d.decisionText);};
+    const editV=row.querySelector('[data-editv]');
+    if(editV)editV.onclick=()=>{if(d.alloc&&e){Object.keys(d.alloc).forEach(y=>{if(e.soldes[y]!==undefined)e.soldes[y]+=d.alloc[y];});save(LS_EMP,employees);}d.status='attente';d.decisionNum='';d.decisionText='';d.decisionHtml='';d.alloc={};d.reliqTxt='';save(LS_DEM,demandes);toast('Décision remise en attente — corrigez puis retraitez-la');startEdit(d);};
+    const cancelBtn=row.querySelector('[data-cancel]');
+    if(cancelBtn)cancelBtn.onclick=()=>{
+      if(cancelBtn.dataset.armed==='1'){
+        if(d.alloc&&e){Object.keys(d.alloc).forEach(y=>{if(e.soldes[y]!==undefined)e.soldes[y]+=d.alloc[y];});save(LS_EMP,employees);}
+        d.status='annulee';save(LS_DEM,demandes);toast('Décision annulée — solde restauré');renderHist();refreshSoldeBox();
+      }else{cancelBtn.dataset.armed='1';cancelBtn.textContent='Confirmer ?';setTimeout(()=>{if(cancelBtn){cancelBtn.dataset.armed='0';cancelBtn.textContent='Annuler';}},3000);}
+    };
+    body.appendChild(row);});
+}
+document.getElementById('hist-search').oninput=renderHist;
+
+function decisionHTML(txt){
+  let h='';
+  txt.split('\n').forEach((ln,i)=>{const t=ln.trim(); if(!t)return;
+    if(i===0)h+=`<p style="text-align:center;font-weight:700;font-size:1.12em;margin:16px 0 10px">${esc(t)}</p>`;
+    else if(i===2)h+=`<p style="text-align:left;font-weight:700;margin:4px 0 14px">${esc(t)}</p>`;
+    else if(t==='DECIDE')h+=`<p style="text-align:center;font-weight:700;letter-spacing:.4em;text-decoration:underline;margin:16px 0">D E C I D E</p>`;
+    else if(/^ARTICLE \d+ :/.test(t)){
+      const m=t.match(/^(ARTICLE \d+ :)(.*)$/);
+      let body=esc(m[2]);
+      body=body.replace(/\((\d{1,3}\s?jours?)\)/i,'(<b>$1</b>)');
+      body=body.replace(/\bde (\d{1,3}\s?(?:Jours|Semaines))\b/,'de <b>$1</b>');
+      body=boldDyn(body);
+      body=body.replace(/(est de[^.]*?)\.?\s*$/,'<b>$1</b>.');
+      h+=`<p style="text-align:justify;margin:12px 0"><b><u>${esc(m[1])}</u></b>${body}</p>`;
+    }
+    else {let tt=boldDyn(esc(t));h+=`<p style="text-align:justify;margin:4px 0">${tt}</p>`;}});
+  return h;
+}
+function letterhead(){return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:8.5pt;line-height:1.35"><div style="flex:1;text-align:center"><b>ROYAUME DU MAROC</b><br>Ministère de l'Aménagement du Territoire National, de l'Urbanisme, de l'Habitat et de la Politique de la Ville<br>Département de l'Aménagement du Territoire et de l'Urbanisme<br><b>AGENCE URBAINE DE GUELMIM OUED NOUN</b></div><div style="flex:0 0 78px;text-align:center"><img src="${CREST}" style="width:70px"></div><div dir="rtl" style="flex:1;text-align:center"><b>المملكة المغربية</b><br>وزارة إعداد التراب الوطني والتعمير<br>والإسكان وسياسة المدينة<br>قطاع إعداد التراب الوطني والتعمير<br><b>الوكالة الحضرية لكلميم - وادنون</b></div></div><hr style="margin:8px 0 0;border:0;border-top:1px solid #000">`;}
+function footerDoc(){return `<div style="border-top:1px dashed #000;margin-top:28px;padding-top:6px;display:flex;align-items:center;gap:10px;font-size:8pt;text-align:center"><img src="${LOGO3}" style="height:44px"><div style="flex:1">Agence Urbaine de Guelmim Oued Noun. IMMEUBLE B – COMPLEXE ADMINISTRATIF SALMA – B.P : 708. Guelmim<br>Tél : 05 28 77 36 41/ 42. Fax : 05 28 77 36 43. Email : augs.augs01@yahoo.fr</div><img src="${LOGO2}" style="height:44px"></div>`;}
+let modalDoc={html:'',text:''};
+function docShell(html){const w=document.getElementById('modal-header').checked;return `<div class="docv" style="background:#fff;color:#000;padding:22px;border:1px solid var(--line);border-radius:8px">${w?letterhead():''}${html}${w?footerDoc():''}</div>`;}
+function showDoc(html,text){const t=document.createElement('div');t.innerHTML=html;modalDoc={html,text:text||t.textContent};document.getElementById('modal-body').innerHTML=docShell(html);document.getElementById('modal').style.display='block';}
+document.getElementById('modal-header').onchange=()=>{document.getElementById('modal-body').innerHTML=docShell(modalDoc.html);};
+document.getElementById('modal-close').onclick=()=>{document.getElementById('modal').style.display='none';};
+document.getElementById('modal-copy').onclick=()=>{navigator.clipboard?.writeText(modalDoc.text).then(()=>toast('Texte copié')).catch(()=>toast('Copie impossible'));};
+document.getElementById('modal-print').onclick=()=>{
+  const styleTxt=document.querySelector('style').textContent;
+  const full='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Impression</title><style>'+styleTxt+'body{background:#fff;padding:20px;margin:0}</style></head><body>'+docShell(modalDoc.html)+'</body></html>';
+  let blobUrl;
+  try{ blobUrl=URL.createObjectURL(new Blob([full],{type:'text/html'})); }catch(e){ blobUrl=null; }
+  if(!blobUrl){document.getElementById('print-area').innerHTML=docShell(modalDoc.html);window.print();return;}
+  const w=window.open(blobUrl,'_blank');
+  if(!w){toast("Autorisez les fenêtres pop-up pour imprimer, puis réessayez.");URL.revokeObjectURL(blobUrl);return;}
+  const doPrint=()=>{try{w.focus();w.print();}catch(e){}};
+  w.addEventListener('load',()=>setTimeout(doPrint,200));
+  setTimeout(doPrint,900);
+  setTimeout(()=>URL.revokeObjectURL(blobUrl),15000);
+};
+
+function etatHTML(e,yf){
+  const ys=years(); const all=!yf||yf==='all';
+  const list=demandes.filter(d=>d.status==='validee'&&d.employeeId===e.id).sort((a,b)=>a.from.localeCompare(b.from));
+  const consumed={}; ys.forEach(y=>consumed[y]=0);
+  list.forEach(d=>{const al=d.alloc||(d.annee&&d.annee!=='auto'?{[d.annee]:d.days}:{});Object.keys(al).forEach(y=>{if(y in consumed)consumed[y]+=al[y];});});
+  const rowsY=ys.filter(y=>all||y===yf).map(y=>`<tr><td>${y}</td><td>${e.droitAnnuel||22} j</td><td>${consumed[y]} j</td><td><b>${e.soldes[y]??0} j</b></td><td>${isExpired(y)?'Expiré':'Valide'}</td></tr>`).join('');
+  const shown=list.filter(d=>all||d.from.slice(0,4)===yf||(d.alloc&&d.alloc[yf]>0));
+  const rowsL=shown.map(d=>{const al=d.alloc?Object.keys(d.alloc).filter(y=>d.alloc[y]>0).map(y=>`${y} : ${d.alloc[y]} j`).join(' · '):(d.annee&&d.annee!=='auto'?d.annee:'');return `<tr><td>${esc(d.decisionNum||'')}</td><td>${esc(typeLabel(d.type))}</td><td>${fmt(d.from)}</td><td>${fmt(d.to)}</td><td>${d.days} j</td><td>${esc(al)}</td></tr>`;}).join('')||'<tr><td colspan="6" style="text-align:center">Aucun congé enregistré</td></tr>';
+  const st=e.status||'actif';
+  return `<p style="text-align:center;font-weight:700;font-size:1.12em;text-decoration:underline;margin:16px 0 4px">ÉTAT DES CONGÉS ADMINISTRATIFS</p>
+  <p style="text-align:center;margin:0 0 12px">Situation annuelle${all?'':' — '+yf} · édité le ${fmt(new Date().toISOString().slice(0,10))}</p>
+  <p style="margin:4px 0"><b>Agent :</b> ${title(e)} ${esc(e.nom)}${e.matr?' (Matricule '+esc(e.matr)+')':''}</p>
+  <p style="margin:4px 0"><b>Grade :</b> ${esc(cap(e.grade)||'—')} &nbsp; <b>Fonction :</b> ${esc(cap(e.fonction)||'—')}</p>
+  <p style="margin:4px 0"><b>Service :</b> ${esc(cap(e.service)||'—')}${st!=='actif'?' &nbsp; <b>Situation :</b> '+(st==='mutation'?'Muté(e)':'Démissionné(e)'):''}</p>
+  <p style="margin:14px 0 4px"><b>1. Situation par exercice</b></p>
+  <table><thead><tr><th>Année</th><th>Droit annuel</th><th>Congés pris (enregistrés)</th><th>Solde restant</th><th>Validité</th></tr></thead><tbody>${rowsY}</tbody></table>
+  <p style="margin:4px 0"><b>Solde global disponible : ${totalSolde(e)} jours</b>${ys.some(isExpired)?' <i>(hors soldes expirés)</i>':''}</p>
+  <p style="margin:14px 0 4px"><b>2. Détail des congés pris</b></p>
+  <table><thead><tr><th>N° décision</th><th>Type</th><th>Du</th><th>Au</th><th>Jours</th><th>Imputation</th></tr></thead><tbody>${rowsL}</tbody></table>`;
+}
+function fillEtat(){const s=document.getElementById('et-emp');const cur=s.value;s.innerHTML='';employees.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.nom+(isActive(e)?'':' (désactivé)');s.appendChild(o);});if(cur)s.value=cur;
+  const y=document.getElementById('et-year');const cy=y.value;y.innerHTML='<option value="all">Toutes les années</option>'+years().map(v=>`<option value="${v}">${v}</option>`).join('');if(cy)y.value=cy;}
+function renderEtat(){fillEtat();updateEtat();}
+function updateEtat(){const e=empById(document.getElementById('et-emp').value);const box=document.getElementById('et-preview');if(!e){box.innerHTML='';return;}box.innerHTML=`<div class="docv" style="background:#fff;color:#000;padding:18px;border:1px solid var(--line);border-radius:8px">${etatHTML(e,document.getElementById('et-year').value)}</div>`;}
+document.getElementById('et-emp').onchange=updateEtat; document.getElementById('et-year').onchange=updateEtat;
+document.getElementById('et-print').onclick=()=>{const e=empById(document.getElementById('et-emp').value);if(e)showDoc(etatHTML(e,document.getElementById('et-year').value),'');};
+
+let calMonth=new Date(); calMonth.setDate(1);
+function renderCal(){
+  document.getElementById('cal-label').textContent=calMonth.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  const start=new Date(calMonth), end=new Date(calMonth.getFullYear(),calMonth.getMonth()+1,0);
+  const daysInMonth=end.getDate();
+  const validated=demandes.filter(d=>d.status==='validee').filter(d=>{const f=new Date(d.from),t=new Date(d.to);return f<=end&&t>=start;});
+  const body=document.getElementById('cal-body');
+  if(!validated.length){body.innerHTML='<div class="empty">Aucun congé validé ce mois-ci.</div>';return;}
+  body.innerHTML='';
+  validated.forEach(d=>{const e=empById(d.employeeId);const f=new Date(Math.max(new Date(d.from),start)),t=new Date(Math.min(new Date(d.to),end));
+    const left=((f.getDate()-1)/daysInMonth)*100, width=((t.getDate()-f.getDate()+1)/daysInMonth)*100;
+    const row=document.createElement('div'); row.className='cal-emp';
+    row.innerHTML=`<div class="name">${e?e.nom:'—'}</div><div class="cal-track"><div class="cal-bar" style="left:${left}%;width:${width}%" title="${fmt(d.from)} → ${fmt(d.to)}"></div></div>`;
+    body.appendChild(row);});
+}
+document.getElementById('cal-prev').onclick=()=>{calMonth.setMonth(calMonth.getMonth()-1);renderCal();};
+document.getElementById('cal-next').onclick=()=>{calMonth.setMonth(calMonth.getMonth()+1);renderCal();};
+
+let statMonth=new Date(); statMonth.setDate(1);
+function renderStats(){
+  document.getElementById('st-label').textContent=statMonth.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  const start=new Date(statMonth), end=new Date(statMonth.getFullYear(),statMonth.getMonth()+1,0);
+  const validated=demandes.filter(d=>d.status==='validee').filter(d=>{const f=new Date(d.from),t=new Date(d.to);return f<=end&&t>=start;});
+  const activeEmployees=employees.filter(isActive);
+  const onLeaveIds=new Set(validated.map(d=>d.employeeId));
+  const total=activeEmployees.length; const onLeave=[...onLeaveIds].filter(id=>{const e=empById(id);return e&&isActive(e);}).length;
+  const pct=total?Math.round(onLeave/total*1000)/10:0;
+  document.getElementById('st-global').innerHTML=`<div class="row" style="border:none"><div><b style="font-size:1.4rem">${pct}%</b><br><span style="color:var(--sub);font-size:.8rem">de l'effectif actif (${onLeave}/${total}) en congé ce mois-ci</span></div></div><div class="stat-bar"><div class="stat-fill" style="width:${pct}%"></div></div>`;
+  const byDept={};
+  activeEmployees.forEach(e=>{const dept=e.service||'Service non défini';if(!byDept[dept])byDept[dept]={total:0,onLeave:0};byDept[dept].total++;});
+  onLeaveIds.forEach(id=>{const e=empById(id);if(!e)return;const dept=e.service||'Service non défini';byDept[dept].onLeave++;});
+  const body=document.getElementById('st-body'); body.innerHTML='';
+  Object.keys(byDept).sort().forEach(dept=>{const s=byDept[dept];const p=s.total?Math.round(s.onLeave/s.total*1000)/10:0;
+    const row=document.createElement('div'); row.className='row';
+    row.innerHTML=`<div style="flex:1;min-width:200px"><b>${cap(dept)}</b><div class="stat-bar"><div class="stat-fill" style="width:${p}%"></div></div></div><span style="color:var(--sub);font-size:.8rem">${s.onLeave}/${s.total} · ${p}%</span>`;
+    body.appendChild(row);});
+}
+document.getElementById('st-prev').onclick=()=>{statMonth.setMonth(statMonth.getMonth()-1);renderStats();};
+document.getElementById('st-next').onclick=()=>{statMonth.setMonth(statMonth.getMonth()+1);renderStats();};
+
+function fillDirPanel(){document.getElementById('dir-genre').value=settings.director.genre||'F';document.getElementById('dir-name').value=settings.director.name||'';document.getElementById('dir-decree').value=settings.director.decree||'';document.getElementById('dir-date').value=settings.director.date||'';document.getElementById('pw-fatiha').value=(settings.users.fatiha||{}).pass||'';document.getElementById('pw-sanaa').value=(settings.users.sanaa||{}).pass||'';}
+document.getElementById('dir-save').onclick=()=>{settings.director={genre:document.getElementById('dir-genre').value,name:document.getElementById('dir-name').value.toUpperCase(),decree:document.getElementById('dir-decree').value,date:document.getElementById('dir-date').value};save('conges_settings',settings);toast('Directeur/Directrice mis à jour');};
+document.getElementById('pw-save').onclick=()=>{settings.users.fatiha={label:'Fatiha',pass:document.getElementById('pw-fatiha').value||'2026'};settings.users.sanaa={label:'Sanaa',pass:document.getElementById('pw-sanaa').value||'2026'};save('conges_settings',settings);toast('Mots de passe mis à jour');};
+fillDirPanel();
+
+function userList(){return settings.users;}
+function showGate(){const sel=document.getElementById('gate-user');sel.innerHTML=Object.keys(userList()).map(k=>`<option value="${k}">${userList()[k].label}</option>`).join('');document.getElementById('gate-err').textContent='';document.getElementById('gate').style.display='flex';}
+function hideGate(){document.getElementById('gate').style.display='none';const u=sessionStorage.getItem('conges_user');const lbl=u&&userList()[u]?userList()[u].label:'Invité';const bar=document.getElementById('who-bar');bar.innerHTML='';bar.append('Connecté(e) : '+lbl+'  ');const chg=document.createElement('a');chg.href='#';chg.textContent='(changer)';chg.style.cssText='color:inherit;text-decoration:underline;cursor:pointer';chg.onclick=(ev)=>{ev.preventDefault();sessionStorage.removeItem('conges_user');showGate();};bar.appendChild(chg);}
+document.getElementById('gate-go').onclick=()=>{const u=document.getElementById('gate-user').value,pw=document.getElementById('gate-pass').value;const list=userList();if(list[u]&&list[u].pass===pw){sessionStorage.setItem('conges_user',u);hideGate();}else{document.getElementById('gate-err').textContent='Mot de passe incorrect.';}};
+document.getElementById('gate-pass').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('gate-go').click();});
+if(sessionStorage.getItem('conges_user')) hideGate(); else showGate();
+
+function rerenderAll(){fillEmpSelect(dEmp);fillYearSelect(dAnnee);refreshSoldeBox();renderRH();renderPersonnel();renderHolidays();renderHist();renderCal();renderStats();renderEtat();fillDirPanel();}
+function pushState(){if(!dbNS||applyingRemote)return;clearTimeout(pushTimer);pushTimer=setTimeout(()=>{dbNS.doc('conges/state').set({employees,demandes,holidays,settings,seq,updatedAt:Date.now()}).catch(()=>{});},600);}
+async function initSync(){
+  try{dbNS=(window.claude&&window.claude.use)?await window.claude.use('db'):null;}catch(e){dbNS=null;}
+  if(!dbNS)return;
+  try{
+    dbNS.doc('conges/state').onSnapshot(snap=>{
+      if(!snap||!snap.exists){pushState();return;}
+      const d=snap.data()||{};
+      if(gotFirstSnapshot && (d.updatedAt||0) < localClockAtLastEdit){return;}
+      const wasFirst=!gotFirstSnapshot; gotFirstSnapshot=true;
+      applyingRemote=true;
+      if(d.employees)employees=d.employees; if(d.demandes)demandes=d.demandes; if(d.holidays)holidays=d.holidays; if(d.settings)settings=d.settings; if(d.seq)seq=d.seq;
+      save(LS_EMP,employees);save(LS_DEM,demandes);save(LS_HOL,holidays);save('conges_settings',settings);save(LS_SEQ,seq);
+      applyingRemote=false; rerenderAll(); if(!wasFirst)toast('Données synchronisées');
+    });
+  }catch(e){dbNS=null;}
+}
+initSync();
+</script>
+</body>
+</html>
